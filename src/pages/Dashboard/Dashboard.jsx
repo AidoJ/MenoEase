@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
 import { supabase } from '../../config/supabase'
-import { getTodayDate, calculateSleepDuration } from '../../utils/helpers'
+import { getTodayDate, calculateSleepDuration, formatDate } from '../../utils/helpers'
+import { format, subDays } from 'date-fns'
 import './Dashboard.css'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -19,6 +21,7 @@ const Dashboard = () => {
   })
   const [streak, setStreak] = useState(0)
   const [completion, setCompletion] = useState(0)
+  const [recentHistory, setRecentHistory] = useState([])
 
   const quickActions = [
     { icon: '🌙', label: 'Sleep', path: '/sleep' },
@@ -34,6 +37,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       loadDashboardData()
+      loadRecentHistory()
     }
   }, [user])
 
@@ -44,7 +48,6 @@ const Dashboard = () => {
     try {
       const today = getTodayDate()
 
-      // Load all today's data in parallel
       const [
         sleepData,
         moodData,
@@ -71,16 +74,17 @@ const Dashboard = () => {
         }
       }
 
-      // Get energy level
+      // Get energy level (now 0-11 integer)
       let energyDisplay = '--'
-      if (moodData.data) {
-        const energyMap = {
-          crashed: '😴',
-          low: '😐',
-          ok: '🙂',
-          energised: '⚡',
-        }
-        energyDisplay = energyMap[moodData.data.energy_level] || '--'
+      if (moodData.data && moodData.data.energy_level !== null && moodData.data.energy_level !== undefined) {
+        const energyValue = moodData.data.energy_level
+        const energyEmoji = energyValue <= 1 ? '😴' : 
+                           energyValue <= 3 ? '😐' : 
+                           energyValue <= 5 ? '😑' : 
+                           energyValue <= 7 ? '🙂' : 
+                           energyValue <= 9 ? '😊' : 
+                           energyValue === 10 ? '⚡' : '🚀'
+        energyDisplay = `${energyEmoji} ${energyValue}/11`
       }
 
       // Get hydration
@@ -121,9 +125,46 @@ const Dashboard = () => {
     }
   }
 
+  const loadRecentHistory = async () => {
+    if (!user) return
+    
+    try {
+      const today = getTodayDate()
+      const last7Days = Array.from({ length: 7 }, (_, i) => 
+        format(subDays(new Date(today), i), 'yyyy-MM-dd')
+      )
+
+      const [sleep, mood, food, exercise] = await Promise.all([
+        supabase.from('sleep_logs').select('date, quality').eq('user_id', user.id).in('date', last7Days),
+        supabase.from('mood_logs').select('date, energy_level').eq('user_id', user.id).in('date', last7Days),
+        supabase.from('food_logs').select('date').eq('user_id', user.id).in('date', last7Days),
+        supabase.from('exercises').select('date').eq('user_id', user.id).in('date', last7Days),
+      ])
+
+      const history = last7Days.map(date => {
+        const hasSleep = sleep.data?.some(s => s.date === date)
+        const hasMood = mood.data?.some(m => m.date === date)
+        const hasFood = food.data?.some(f => f.date === date)
+        const hasExercise = exercise.data?.some(e => e.date === date)
+        
+        return {
+          date,
+          hasSleep,
+          hasMood,
+          hasFood,
+          hasExercise,
+          energyLevel: mood.data?.find(m => m.date === date)?.energy_level,
+        }
+      })
+
+      setRecentHistory(history)
+    } catch (err) {
+      console.error('Error loading recent history:', err)
+    }
+  }
+
   const calculateStreak = async (userId) => {
     try {
-      // Get all unique dates with any logged data
       const [sleep, mood, food, exercise, journal] = await Promise.all([
         supabase.from('sleep_logs').select('date').eq('user_id', userId).order('date', { ascending: false }),
         supabase.from('mood_logs').select('date').eq('user_id', userId).order('date', { ascending: false }),
@@ -132,7 +173,6 @@ const Dashboard = () => {
         supabase.from('journal_entries').select('date').eq('user_id', userId).order('date', { ascending: false }),
       ])
 
-      // Combine all dates
       const allDates = new Set()
       ;[sleep, mood, food, exercise, journal].forEach(result => {
         if (result.data) {
@@ -140,10 +180,8 @@ const Dashboard = () => {
         }
       })
 
-      // Sort dates descending
       const sortedDates = Array.from(allDates).sort((a, b) => b.localeCompare(a))
       
-      // Calculate consecutive days from today backwards
       let streak = 0
       const today = getTodayDate()
       let currentDate = new Date(today)
@@ -162,6 +200,24 @@ const Dashboard = () => {
     } catch (err) {
       console.error('Error calculating streak:', err)
       return 0
+    }
+  }
+
+  const handleCardClick = (type) => {
+    const today = getTodayDate()
+    switch(type) {
+      case 'sleep':
+        navigate(`/sleep?date=${today}`)
+        break
+      case 'energy':
+      case 'water':
+        navigate(`/mood?date=${today}`)
+        break
+      case 'meals':
+        navigate(`/food?date=${today}`)
+        break
+      default:
+        break
     }
   }
 
@@ -185,23 +241,58 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="stats-grid">
-          <div className="stat-card">
+          <div 
+            className="stat-card clickable"
+            onClick={() => handleCardClick('sleep')}
+            title="Click to view sleep log"
+          >
             <span className="stat-value">{stats.sleep}</span>
             <span className="stat-label">Sleep</span>
           </div>
-          <div className="stat-card teal">
+          <div 
+            className="stat-card teal clickable"
+            onClick={() => handleCardClick('energy')}
+            title="Click to view mood & energy"
+          >
             <span className="stat-value">{stats.energy}</span>
             <span className="stat-label">Energy</span>
           </div>
-          <div className="stat-card teal">
+          <div 
+            className="stat-card teal clickable"
+            onClick={() => handleCardClick('water')}
+            title="Click to view mood & wellness"
+          >
             <span className="stat-value">{stats.water}</span>
             <span className="stat-label">Water</span>
           </div>
-          <div className="stat-card">
+          <div 
+            className="stat-card clickable"
+            onClick={() => handleCardClick('meals')}
+            title="Click to view food log"
+          >
             <span className="stat-value">{stats.meals}</span>
             <span className="stat-label">Meals</span>
           </div>
         </div>
+
+        {recentHistory.length > 0 && (
+          <div className="history-sparkline">
+            <div className="sparkline-label">Last 7 Days</div>
+            <div className="sparkline-dots">
+              {recentHistory.reverse().map((day, idx) => {
+                const isToday = day.date === getTodayDate()
+                const hasData = day.hasSleep || day.hasMood || day.hasFood || day.hasExercise
+                return (
+                  <div
+                    key={idx}
+                    className={`sparkline-dot ${hasData ? 'has-data' : ''} ${isToday ? 'today' : ''}`}
+                    title={formatDate(day.date)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card>

@@ -1,18 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { exerciseService } from '../../services/supabaseService'
 import { getExercisesMaster } from '../../services/masterDataService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import { getTodayDate, formatDate } from '../../utils/helpers'
+import { supabase } from '../../config/supabase'
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from 'date-fns'
 import './Exercise.css'
 
 const Exercise = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [weeklySummary, setWeeklySummary] = useState(null)
   
   const [exercisesMaster, setExercisesMaster] = useState([])
   const [activityType, setActivityType] = useState('')
@@ -23,6 +30,10 @@ const Exercise = () => {
   useEffect(() => {
     loadExercisesMaster()
   }, [])
+
+  useEffect(() => {
+    loadWeeklySummary()
+  }, [selectedDate])
 
   const loadExercisesMaster = async () => {
     try {
@@ -36,6 +47,39 @@ const Exercise = () => {
       console.error('Error loading exercises master:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadWeeklySummary = async () => {
+    if (!user) return
+    
+    try {
+      const selectedDateObj = new Date(selectedDate)
+      const weekStart = startOfWeek(selectedDateObj, { weekStartsOn: 1 }) // Monday
+      const weekEnd = endOfWeek(selectedDateObj, { weekStartsOn: 1 })
+      
+      const { data, error } = await supabase
+        .from('exercises')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('date', format(weekStart, 'yyyy-MM-dd'))
+        .lte('date', format(weekEnd, 'yyyy-MM-dd'))
+        .order('date', { ascending: false })
+      
+      if (error) throw error
+      
+      const workouts = data || []
+      const totalMinutes = workouts.reduce((sum, w) => sum + (parseInt(w.duration) || 0), 0)
+      
+      setWeeklySummary({
+        workouts: workouts,
+        count: workouts.length,
+        totalMinutes: totalMinutes,
+        weekStart: format(weekStart, 'yyyy-MM-dd'),
+        weekEnd: format(weekEnd, 'yyyy-MM-dd'),
+      })
+    } catch (err) {
+      console.error('Error loading weekly summary:', err)
     }
   }
 
@@ -53,10 +97,9 @@ const Exercise = () => {
     setSuccess(false)
 
     try {
-      const today = getTodayDate()
       const exerciseData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         activity_type: activityType,
         duration: parseInt(duration),
         intensity: intensity,
@@ -69,10 +112,10 @@ const Exercise = () => {
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
-        // Reset form
         setDuration('')
         setNotes('')
         setIntensity('moderate')
+        loadWeeklySummary()
       }, 2000)
     } catch (err) {
       setError(err.message || 'Failed to save exercise')
@@ -103,6 +146,45 @@ const Exercise = () => {
   return (
     <div className="exercise">
       <div className="page-title">Exercise & Activity</div>
+
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
+
+      {weeklySummary && (
+        <Card>
+          <div className="card-title">This Week</div>
+          <div className="card-subtitle">
+            {format(new Date(weeklySummary.weekStart), 'MMM d')} - {format(new Date(weeklySummary.weekEnd), 'MMM d')}
+          </div>
+          <div className="weekly-stats">
+            <div className="stat-item">
+              <div className="stat-value">{weeklySummary.count}</div>
+              <div className="stat-label">Workouts</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-value">{weeklySummary.totalMinutes}</div>
+              <div className="stat-label">Minutes</div>
+            </div>
+          </div>
+          {weeklySummary.workouts.length > 0 && (
+            <div className="weekly-workouts">
+              {weeklySummary.workouts.map((workout) => (
+                <div key={workout.id} className="workout-item">
+                  <div className="workout-date">{formatDate(workout.date)}</div>
+                  <div className="workout-details">
+                    <span className="workout-activity">{workout.activity_type}</span>
+                    <span className="workout-duration">{workout.duration} min</span>
+                    <span className="workout-intensity">{intensityOptions.find(i => i.value === workout.intensity)?.emoji}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card>
         <form onSubmit={handleSave}>

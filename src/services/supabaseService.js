@@ -11,12 +11,15 @@ export const sleepService = {
     return { data: result, error }
   },
 
-  async getByDate(date) {
-    const { data, error } = await supabase
+  async getByDate(date, userId = null) {
+    let query = supabase
       .from('sleep_logs')
       .select('*')
       .eq('date', date)
-      .single()
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+    const { data, error } = await query.single()
     return { data, error }
   },
 
@@ -143,12 +146,15 @@ export const journalService = {
     return { data: result, error }
   },
 
-  async getByDate(date) {
-    const { data, error } = await supabase
+  async getByDate(date, userId = null) {
+    let query = supabase
       .from('journal_entries')
       .select('*')
       .eq('date', date)
-      .single()
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+    const { data, error } = await query.single()
     return { data, error }
   },
 

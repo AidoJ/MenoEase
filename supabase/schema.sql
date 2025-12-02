@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS mood_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  energy_level VARCHAR(20), -- 'crashed', 'low', 'ok', 'energised'
+  energy_level INTEGER, -- 0-11 scale (references energy_levels table)
   mental_clarity JSONB, -- Array of clarity states
   emotional_state JSONB, -- Array of emotional states
   stress_management JSONB, -- Array of stress management activities

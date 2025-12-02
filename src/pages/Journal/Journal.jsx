@@ -1,35 +1,39 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { journalService } from '../../services/supabaseService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
 import { getTodayDate, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
+import { format } from 'date-fns'
 import './Journal.css'
 
 const Journal = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [recentEntries, setRecentEntries] = useState([])
   
   const [content, setContent] = useState('')
   const [moodSummary, setMoodSummary] = useState('Overall Good Day')
-  const [recentEntries, setRecentEntries] = useState([])
 
   useEffect(() => {
-    loadTodayJournal()
+    loadJournalEntry()
     loadRecentEntries()
-  }, [])
+  }, [selectedDate])
 
-  const loadTodayJournal = async () => {
+  const loadJournalEntry = async () => {
     if (!user) return
     
     setLoading(true)
     try {
-      const today = getTodayDate()
-      const { data, error } = await journalService.getByDate(today)
+      const { data, error } = await journalService.getByDate(selectedDate, user.id)
       
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading journal:', error)
@@ -39,6 +43,9 @@ const Journal = () => {
       if (data) {
         setContent(data.content || '')
         setMoodSummary(data.mood_summary || 'Overall Good Day')
+      } else {
+        setContent('')
+        setMoodSummary('Overall Good Day')
       }
     } catch (err) {
       console.error('Error loading journal:', err)
@@ -54,10 +61,8 @@ const Journal = () => {
       const { data, error } = await journalService.getAll(user.id)
       if (error) throw error
       
-      // Get last 7 entries (excluding today)
-      const today = getTodayDate()
       const recent = (data || [])
-        .filter(entry => entry.date !== today)
+        .filter(entry => entry.date !== selectedDate)
         .slice(0, 7)
       setRecentEntries(recent)
     } catch (err) {
@@ -79,16 +84,14 @@ const Journal = () => {
     setSuccess(false)
 
     try {
-      const today = getTodayDate()
       const journalData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         content: content.trim(),
         mood_summary: moodSummary,
       }
 
-      // Check if entry exists
-      const { data: existing } = await journalService.getByDate(today)
+      const { data: existing } = await journalService.getByDate(selectedDate)
       
       if (existing) {
         const { error } = await supabase
@@ -110,6 +113,10 @@ const Journal = () => {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSelectHistoryDate = (date) => {
+    setSelectedDate(date)
   }
 
   const moodSummaryOptions = [
@@ -134,8 +141,14 @@ const Journal = () => {
     <div className="journal">
       <div className="page-title">Daily Journal</div>
 
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
+
       <Card>
-        <div className="card-title">{formatDate(new Date())}</div>
+        <div className="card-title">{formatDate(selectedDate)}</div>
         <div className="card-subtitle">Capture your thoughts, patterns & insights</div>
 
         <form onSubmit={handleSave}>
@@ -174,16 +187,18 @@ const Journal = () => {
         </form>
       </Card>
 
-      <Card>
-        <div className="card-title">Recent Entries</div>
-        <div className="card-subtitle">Your last 7 days</div>
+      {recentEntries.length > 0 && (
+        <Card>
+          <div className="card-title">Recent Entries</div>
+          <div className="card-subtitle">Your last 7 days</div>
 
-        <div className="recent-entries">
-          {recentEntries.length === 0 ? (
-            <div className="empty-state">No previous entries yet. Start writing to see your history here!</div>
-          ) : (
-            recentEntries.map((entry) => (
-              <div key={entry.id} className="entry-preview">
+          <div className="recent-entries">
+            {recentEntries.map((entry) => (
+              <div
+                key={entry.id}
+                className="entry-preview"
+                onClick={() => handleSelectHistoryDate(entry.date)}
+              >
                 <div className="entry-header">
                   <div className="entry-date">{formatDate(entry.date)}</div>
                   <div className="entry-mood">{entry.mood_summary}</div>
@@ -194,10 +209,10 @@ const Journal = () => {
                     : entry.content}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

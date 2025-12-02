@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { sleepService } from '../../services/supabaseService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate, calculateSleepDuration } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import { getTodayDate, calculateSleepDuration, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
+import { format, parseISO } from 'date-fns'
 import './SleepLog.css'
 
 const SleepLog = () => {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [recentNights, setRecentNights] = useState([])
   
   const [quality, setQuality] = useState('good')
   const [bedtime, setBedtime] = useState('23:00')
@@ -21,18 +27,18 @@ const SleepLog = () => {
   const [disturbances, setDisturbances] = useState('')
 
   useEffect(() => {
-    loadTodaySleep()
-  }, [])
+    loadSleepData()
+    loadRecentNights()
+  }, [selectedDate])
 
-  const loadTodaySleep = async () => {
+  const loadSleepData = async () => {
     if (!user) return
     
     setLoading(true)
     try {
-      const today = getTodayDate()
-      const { data, error } = await sleepService.getByDate(today)
+      const { data, error } = await sleepService.getByDate(selectedDate, user.id)
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error && error.code !== 'PGRST116') {
         console.error('Error loading sleep log:', error)
         return
       }
@@ -43,11 +49,46 @@ const SleepLog = () => {
         setWakeTime(data.wake_time || '06:30')
         setNightSweats(data.night_sweats || 'none')
         setDisturbances(data.disturbances || '')
+      } else {
+        // Reset form if no data for this date
+        setQuality('good')
+        setBedtime('23:00')
+        setWakeTime('06:30')
+        setNightSweats('none')
+        setDisturbances('')
       }
     } catch (err) {
       console.error('Error loading sleep log:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRecentNights = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await sleepService.getAll(user.id)
+      if (error) throw error
+      
+      // Get last 7 nights (excluding selected date)
+      const recent = (data || [])
+        .filter(entry => entry.date !== selectedDate)
+        .slice(0, 7)
+        .map(entry => {
+          const duration = calculateSleepDuration(
+            entry.bedtime ? `2000-01-01T${entry.bedtime}:00` : null,
+            entry.wake_time ? `2000-01-01T${entry.wake_time}:00` : null
+          )
+          return {
+            ...entry,
+            duration: duration ? `${duration.hours}h ${duration.minutes}m` : '--'
+          }
+        })
+      
+      setRecentNights(recent)
+    } catch (err) {
+      console.error('Error loading recent nights:', err)
     }
   }
 
@@ -60,10 +101,9 @@ const SleepLog = () => {
     setSuccess(false)
 
     try {
-      const today = getTodayDate()
       const sleepData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         bedtime: bedtime,
         wake_time: wakeTime,
         quality: quality,
@@ -71,8 +111,8 @@ const SleepLog = () => {
         disturbances: disturbances || null,
       }
 
-      // Check if entry exists for today
-      const { data: existing } = await sleepService.getByDate(today)
+      // Check if entry exists for selected date
+      const { data: existing } = await sleepService.getByDate(selectedDate, user.id)
       
       let result
       if (existing) {
@@ -90,12 +130,17 @@ const SleepLog = () => {
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+      loadRecentNights() // Refresh history
     } catch (err) {
       setError(err.message || 'Failed to save sleep log')
       console.error('Error saving sleep log:', err)
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSelectHistoryDate = (date) => {
+    setSelectedDate(date)
   }
 
   const qualityOptions = [
@@ -131,6 +176,12 @@ const SleepLog = () => {
   return (
     <div className="sleep-log">
       <div className="page-title">Sleep Log</div>
+
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
 
       <Card>
         <form onSubmit={handleSave}>
@@ -210,6 +261,34 @@ const SleepLog = () => {
           </Button>
         </form>
       </Card>
+
+      {recentNights.length > 0 && (
+        <Card>
+          <div className="card-title">Recent Nights</div>
+          <div className="card-subtitle">Last 7 nights</div>
+          <div className="sleep-history">
+            {recentNights.map((night) => (
+              <div
+                key={night.id}
+                className="sleep-history-item"
+                onClick={() => handleSelectHistoryDate(night.date)}
+              >
+                <div className="history-date">{formatDate(night.date)}</div>
+                <div className="history-details">
+                  <div className="history-quality">
+                    {qualityOptions.find(q => q.value === night.quality)?.emoji || '😊'}
+                    <span>{night.quality || 'Good'}</span>
+                  </div>
+                  <div className="history-duration">{night.duration}</div>
+                  {night.night_sweats && night.night_sweats !== 'none' && (
+                    <div className="history-sweats">💦 {night.night_sweats}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

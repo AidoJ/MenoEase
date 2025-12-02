@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { moodService } from '../../services/supabaseService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import EnergyInput from '../../components/EnergyInput/EnergyInput'
+import { getTodayDate, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
+import { format } from 'date-fns'
 import './MoodWellness.css'
 
 const MoodWellness = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [recentDays, setRecentDays] = useState([])
   
-  const [energyLevel, setEnergyLevel] = useState('ok')
+  const [energyLevel, setEnergyLevel] = useState(5) // Default to 5 (Flat / Below Average)
   const [mentalClarity, setMentalClarity] = useState([])
   const [emotionalState, setEmotionalState] = useState([])
   const [stressManagement, setStressManagement] = useState([])
@@ -27,19 +34,19 @@ const MoodWellness = () => {
 
   useEffect(() => {
     loadTodayMood()
-  }, [])
+    loadRecentDays()
+  }, [selectedDate])
 
   const loadTodayMood = async () => {
     if (!user) return
     
     setLoading(true)
     try {
-      const today = getTodayDate()
       const { data, error } = await supabase
         .from('mood_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', today)
+        .eq('date', selectedDate)
         .single()
       
       if (error && error.code !== 'PGRST116') {
@@ -48,7 +55,7 @@ const MoodWellness = () => {
       }
       
       if (data) {
-        setEnergyLevel(data.energy_level || 'ok')
+        setEnergyLevel(data.energy_level !== null && data.energy_level !== undefined ? data.energy_level : 5)
         setMentalClarity(data.mental_clarity || [])
         setEmotionalState(data.emotional_state || [])
         setStressManagement(data.stress_management || [])
@@ -60,11 +67,46 @@ const MoodWellness = () => {
           setWeatherSymptoms(data.weather_impact.symptoms || [])
           setWeatherNotes(data.weather_impact.notes || '')
         }
+      } else {
+        // Reset form if no data
+        setEnergyLevel(5)
+        setMentalClarity([])
+        setEmotionalState([])
+        setStressManagement([])
+        setTensionZones([])
+        setHydration(1.8)
+        setCaffeine(false)
+        setAlcohol(false)
+        setWeatherSymptoms([])
+        setWeatherNotes('')
       }
     } catch (err) {
       console.error('Error loading mood log:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRecentDays = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('mood_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(7)
+      
+      if (error) throw error
+      
+      const recent = (data || [])
+        .filter(entry => entry.date !== selectedDate)
+        .slice(0, 7)
+      
+      setRecentDays(recent)
+    } catch (err) {
+      console.error('Error loading recent days:', err)
     }
   }
 
@@ -77,10 +119,9 @@ const MoodWellness = () => {
     setSuccess(false)
 
     try {
-      const today = getTodayDate()
       const moodData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         energy_level: energyLevel,
         mental_clarity: mentalClarity,
         emotional_state: emotionalState,
@@ -100,7 +141,7 @@ const MoodWellness = () => {
         .from('mood_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', today)
+        .eq('date', selectedDate)
         .single()
       
       if (existing) {
@@ -116,6 +157,7 @@ const MoodWellness = () => {
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+      loadRecentDays()
     } catch (err) {
       setError(err.message || 'Failed to save wellness log')
       console.error('Error saving mood log:', err)
@@ -131,13 +173,6 @@ const MoodWellness = () => {
         : [...prev, item]
     )
   }
-
-  const energyOptions = [
-    { value: 'crashed', emoji: '😴', label: 'Crashed' },
-    { value: 'low', emoji: '😐', label: 'Low' },
-    { value: 'ok', emoji: '🙂', label: 'OK' },
-    { value: 'energised', emoji: '⚡', label: 'Energised' },
-  ]
 
   const mentalClarityOptions = [
     { value: 'Clear', emoji: '✨', label: 'Clear' },
@@ -191,25 +226,35 @@ const MoodWellness = () => {
     )
   }
 
+  const getEnergyEmoji = (level) => {
+    if (level <= 1) return '😴'
+    if (level <= 3) return '😐'
+    if (level <= 5) return '😑'
+    if (level <= 7) return '🙂'
+    if (level <= 9) return '😊'
+    if (level === 10) return '⚡'
+    return '🚀'
+  }
+
   return (
     <div className="mood-wellness">
       <div className="page-title">Mood & Wellness</div>
 
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
+
       <form onSubmit={handleSave}>
         <Card>
           <div className="card-title">Energy Level</div>
-          <div className="selection-grid">
-            {energyOptions.map((option) => (
-              <div
-                key={option.value}
-                className={`selection-btn ${energyLevel === option.value ? 'selected' : ''}`}
-                onClick={() => setEnergyLevel(option.value)}
-              >
-                <span className="emoji">{option.emoji}</span>
-                <span className="label">{option.label}</span>
-              </div>
-            ))}
-          </div>
+          <div className="card-subtitle">Select your energy level (0-11)</div>
+          <EnergyInput
+            value={energyLevel}
+            onChange={setEnergyLevel}
+            showDescription={true}
+          />
         </Card>
 
         <Card>
@@ -355,6 +400,37 @@ const MoodWellness = () => {
           {saving ? 'Saving...' : 'Save Wellness Log'}
         </Button>
       </form>
+
+      {recentDays.length > 0 && (
+        <Card>
+          <div className="card-title">Recent Wellness Days</div>
+          <div className="card-subtitle">Last 7 days</div>
+          <div className="wellness-history">
+            {recentDays.map((day) => (
+              <div
+                key={day.id}
+                className="wellness-history-item"
+                onClick={() => setSelectedDate(day.date)}
+              >
+                <div className="history-date">{formatDate(day.date)}</div>
+                <div className="history-details">
+                  <div className="history-energy">
+                    {getEnergyEmoji(day.energy_level)} Energy: {day.energy_level}/11
+                  </div>
+                  <div className="history-hydration">
+                    💧 {day.hydration_liters?.toFixed(1)}L
+                  </div>
+                  {day.emotional_state && day.emotional_state.length > 0 && (
+                    <div className="history-emotions">
+                      {day.emotional_state.slice(0, 2).join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

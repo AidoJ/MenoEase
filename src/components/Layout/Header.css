@@ -23,6 +23,26 @@
   font-weight: 400;
 }
 
+.profile-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 2px solid rgba(123, 91, 216, 0.2);
+  background: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-btn:hover {
+  background: var(--purple-light);
+  border-color: var(--purple);
+  transform: scale(1.05);
+}
+
 .sign-out-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);

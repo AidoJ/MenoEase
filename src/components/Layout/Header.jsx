@@ -1,9 +1,11 @@
 import { useAuth } from '../../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import './Header.css'
 
 const Header = () => {
   const { user, signOut } = useAuth()
+  const navigate = useNavigate()
   const today = format(new Date(), 'EEEE, MMMM d, yyyy')
 
   const handleSignOut = async () => {
@@ -18,9 +20,18 @@ const Header = () => {
           <div className="subtitle">{today}</div>
         </div>
         {user && (
-          <button className="sign-out-btn" onClick={handleSignOut}>
-            Sign Out
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button 
+              className="profile-btn" 
+              onClick={() => navigate('/profile')}
+              title="Profile & Settings"
+            >
+              ⚙️
+            </button>
+            <button className="sign-out-btn" onClick={handleSignOut}>
+              Sign Out
+            </button>
+          </div>
         )}
       </div>
     </header>

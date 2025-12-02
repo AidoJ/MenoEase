@@ -11,6 +11,7 @@ import Exercise from './pages/Exercise/Exercise'
 import MoodWellness from './pages/MoodWellness/MoodWellness'
 import Journal from './pages/Journal/Journal'
 import Insights from './pages/Insights/Insights'
+import Profile from './pages/Profile/Profile'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
@@ -40,6 +41,7 @@ function App() {
               <Route path="mood" element={<MoodWellness />} />
               <Route path="journal" element={<Journal />} />
               <Route path="insights" element={<Insights />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Routes>
         </Router>

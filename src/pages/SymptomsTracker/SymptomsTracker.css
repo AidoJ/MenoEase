@@ -101,3 +101,63 @@
   border: 1px solid #cfc;
 }
 
+.symptoms-history {
+  margin-top: 14px;
+}
+
+.symptom-history-item {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(248, 249, 253, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.symptom-history-item:hover {
+  background: var(--purple-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(123, 91, 216, 0.1);
+}
+
+.history-date {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.history-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-severity {
+  font-size: 13px;
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.history-symptoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.symptom-badge {
+  background: var(--teal-light);
+  color: var(--teal);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.symptom-more {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+}
+

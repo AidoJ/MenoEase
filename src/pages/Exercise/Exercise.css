@@ -22,3 +22,70 @@
   border: 1px solid #cfc;
 }
 
+.weekly-stats {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin: 20px 0;
+  padding: 24px;
+  background: var(--teal-light);
+  border-radius: 14px;
+  border: 1px solid rgba(38, 198, 218, 0.2);
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.stat-label {
+  font-size: 16px;
+  color: #555;
+  margin-top: 8px;
+}
+
+.weekly-workouts {
+  margin-top: 16px;
+}
+
+.workout-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: white;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.workout-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workout-details {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.workout-activity {
+  font-weight: 600;
+  color: var(--purple);
+}
+
+.workout-duration {
+  color: var(--muted);
+}
+
+.workout-intensity {
+  font-size: 18px;
+}
+

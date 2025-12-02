@@ -168,16 +168,31 @@ ON CONFLICT (symptom) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS energy_levels (
   value INTEGER PRIMARY KEY,
-  label VARCHAR(100) NOT NULL
+  label VARCHAR(100) NOT NULL,
+  mood VARCHAR(100),
+  description TEXT
 );
 
-INSERT INTO energy_levels (value, label) VALUES
-(1, 'Completely exhausted'),
-(2, 'Low energy'),
-(3, 'Okay'),
-(4, 'Good energy'),
-(5, 'Energised')
-ON CONFLICT (value) DO UPDATE SET label = EXCLUDED.label;
+-- Clear existing and insert new detailed energy levels
+TRUNCATE TABLE energy_levels;
+
+INSERT INTO energy_levels (value, label, mood, description) VALUES
+(0, 'Utterly Depleted', 'Numb, drained', 'No energy at all; even small tasks feel impossible.'),
+(1, 'Barely Functioning', 'Lethargic, heavy', 'Extreme fatigue; moving through the day feels overwhelming.'),
+(2, 'Heavy', 'Weighted, slow', 'Body feels heavy and drained even if sleep was adequate.'),
+(3, 'Very Low Energy', 'Weary', 'Emotionally tired; tired in the bones.'),
+(4, 'Low and Sluggish', 'Foggy, dull', 'Able to function but everything feels like a chore.'),
+(5, 'Flat or Below Average', 'Flat, unmotivated', 'Getting through the day but lacking spark.'),
+(6, 'Functional but Tired', 'Neutral, mildly fatigued', 'Usable energy, dips throughout the day.'),
+(7, 'Up and Down', 'Unpredictable', 'Energy fluctuates - bursts followed by crashes.'),
+(8, 'Steady', 'Balanced', 'Good, stable energy without spikes or dips.'),
+(9, 'Good Energy', 'Light, optimistic', 'Productive pace, clear mind, able to handle the day well.'),
+(10, 'Very Good Energy', 'Motivated, uplifted', 'Strong stamina and mental clarity.'),
+(11, 'Peak Energy', 'Energised, vibrant', 'At your best - strong, sharp, motivated.')
+ON CONFLICT (value) DO UPDATE SET 
+  label = EXCLUDED.label,
+  mood = EXCLUDED.mood,
+  description = EXCLUDED.description;
 
 -- ============================================
 -- 8. MOOD LEVEL SCALE

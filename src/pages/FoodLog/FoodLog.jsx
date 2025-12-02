@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { foodService } from '../../services/supabaseService'
 import { getFoodItems } from '../../services/masterDataService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import { getTodayDate, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
+import { format } from 'date-fns'
 import './FoodLog.css'
 
 const FoodLog = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [todayMeals, setTodayMeals] = useState([])
   
   const [foodItems, setFoodItems] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -32,6 +38,10 @@ const FoodLog = () => {
     loadFoodItems()
   }, [])
 
+  useEffect(() => {
+    loadTodayMeals()
+  }, [selectedDate])
+
   const loadFoodItems = async () => {
     try {
       const { data, error } = await getFoodItems()
@@ -41,6 +51,21 @@ const FoodLog = () => {
       console.error('Error loading food items:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadTodayMeals = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await foodService.getByDate(selectedDate, user.id)
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading meals:', error)
+        return
+      }
+      setTodayMeals(data || [])
+    } catch (err) {
+      console.error('Error loading meals:', err)
     }
   }
 
@@ -70,21 +95,19 @@ const FoodLog = () => {
     e.preventDefault()
     if (!user) return
 
+    if (selectedFoods.length === 0) {
+      setError('Please add at least one food item')
+      return
+    }
+
     setSaving(true)
     setError('')
     setSuccess(false)
 
     try {
-      if (selectedFoods.length === 0) {
-        setError('Please add at least one food item')
-        setSaving(false)
-        return
-      }
-
-      const today = getTodayDate()
       const foodData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         meal_type: mealType,
         foods: selectedFoods.map(f => ({ id: f.id, name: f.name, category: f.category })),
         post_meal_symptoms: postMealSymptoms,
@@ -96,10 +119,10 @@ const FoodLog = () => {
       setSuccess(true)
       setTimeout(() => {
         setSuccess(false)
-        // Reset form
         setSelectedFoods([])
         setPostMealSymptoms([])
         setSearchTerm('')
+        loadTodayMeals()
       }, 2000)
     } catch (err) {
       setError(err.message || 'Failed to save meal')
@@ -109,11 +132,45 @@ const FoodLog = () => {
     }
   }
 
+  const handleEditMeal = (meal) => {
+    setMealType(meal.meal_type || 'Breakfast')
+    if (meal.foods) {
+      const foods = meal.foods.map(f => ({
+        id: f.id || f.name,
+        name: f.name,
+        category: f.category
+      }))
+      setSelectedFoods(foods)
+    }
+    if (meal.post_meal_symptoms) {
+      setPostMealSymptoms(meal.post_meal_symptoms)
+    }
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleDeleteMeal = async (mealId) => {
+    if (!confirm('Delete this meal?')) return
+    
+    try {
+      const { error } = await supabase
+        .from('food_logs')
+        .delete()
+        .eq('id', mealId)
+      
+      if (error) throw error
+      loadTodayMeals()
+    } catch (err) {
+      console.error('Error deleting meal:', err)
+      setError('Failed to delete meal')
+    }
+  }
+
   const copyFromYesterday = async () => {
     if (!user) return
     
     try {
-      const yesterday = new Date()
+      const yesterday = new Date(selectedDate)
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = getTodayDate(yesterday.toISOString())
       
@@ -121,11 +178,9 @@ const FoodLog = () => {
       if (error && error.code !== 'PGRST116') throw error
       
       if (data && data.length > 0) {
-        // Get the most recent meal from yesterday
         const lastMeal = data[data.length - 1]
         setMealType(lastMeal.meal_type || 'Breakfast')
         if (lastMeal.foods) {
-          // Reconstruct food objects from stored data
           const foods = lastMeal.foods.map(f => ({
             id: f.id || f.name,
             name: f.name,
@@ -157,9 +212,69 @@ const FoodLog = () => {
     )
   }
 
+  const mealsByType = todayMeals.reduce((acc, meal) => {
+    const type = meal.meal_type || 'Other'
+    if (!acc[type]) acc[type] = []
+    acc[type].push(meal)
+    return acc
+  }, {})
+
   return (
     <div className="food-log">
       <div className="page-title">Food Log</div>
+
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
+
+      {Object.keys(mealsByType).length > 0 && (
+        <Card>
+          <div className="card-title">Meals for {formatDate(selectedDate)}</div>
+          {Object.entries(mealsByType).map(([type, meals]) => (
+            <div key={type} className="meal-type-section">
+              <div className="meal-type-header">{type}</div>
+              {meals.map((meal) => (
+                <div key={meal.id} className="meal-item">
+                  <div className="meal-foods">
+                    {meal.foods?.map((food, idx) => (
+                      <span key={idx} className="food-tag">
+                        {food.name}
+                      </span>
+                    ))}
+                  </div>
+                  {meal.post_meal_symptoms && meal.post_meal_symptoms.length > 0 && (
+                    <div className="meal-symptoms">
+                      {meal.post_meal_symptoms.map((symptom, idx) => (
+                        <span key={idx} className="symptom-tag">
+                          {postMealSymptomOptions.find(s => s.value === symptom)?.emoji} {symptom}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="meal-actions">
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      onClick={() => handleEditMeal(meal)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-btn"
+                      onClick={() => handleDeleteMeal(meal.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </Card>
+      )}
 
       <Card>
         <form onSubmit={handleSave}>

@@ -1,0 +1,170 @@
+.date-navigator {
+  margin-bottom: 20px;
+}
+
+.date-navigator-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+}
+
+.date-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid var(--purple);
+  background: white;
+  color: var(--purple);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.date-nav-btn:hover:not(:disabled) {
+  background: var(--purple);
+  color: white;
+  transform: scale(1.05);
+}
+
+.date-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-display {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-main {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.date-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  background: var(--purple-light);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.date-today-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--purple);
+  background: white;
+  color: var(--purple);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-today-btn:hover {
+  background: var(--purple-light);
+}
+
+.date-picker-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.date-picker-popup {
+  background: white;
+  border-radius: 18px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.date-picker-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.date-picker-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.05);
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-picker-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.date-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.date-picker-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.date-picker-quick {
+  display: flex;
+  gap: 8px;
+}
+
+.date-picker-quick button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--purple);
+  background: white;
+  color: var(--purple);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-picker-quick button:hover {
+  background: var(--purple-light);
+}
+

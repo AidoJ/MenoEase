@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { symptomService } from '../../services/supabaseService'
 import { getSymptomsMasterByCategory } from '../../services/masterDataService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import { getTodayDate, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
+import { format } from 'date-fns'
 import './SymptomsTracker.css'
 
 const SymptomsTracker = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
+  const [recentDays, setRecentDays] = useState([])
   
   const [symptomsByCategory, setSymptomsByCategory] = useState({})
   const [selectedPhysical, setSelectedPhysical] = useState([])
@@ -22,8 +28,12 @@ const SymptomsTracker = () => {
 
   useEffect(() => {
     loadSymptomsMaster()
-    loadTodaySymptoms()
   }, [])
+
+  useEffect(() => {
+    loadTodaySymptoms()
+    loadRecentDays()
+  }, [selectedDate])
 
   const loadSymptomsMaster = async () => {
     try {
@@ -41,8 +51,7 @@ const SymptomsTracker = () => {
     if (!user) return
     
     try {
-      const today = getTodayDate()
-      const { data, error } = await symptomService.getByDate(today, user.id)
+      const { data, error } = await symptomService.getByDate(selectedDate, user.id)
       
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading symptoms:', error)
@@ -53,9 +62,36 @@ const SymptomsTracker = () => {
         setSelectedPhysical(data.physical_symptoms || [])
         setSelectedEmotional(data.emotional_symptoms || [])
         setSeverity(data.severity || 5)
+      } else {
+        setSelectedPhysical([])
+        setSelectedEmotional([])
+        setSeverity(5)
       }
     } catch (err) {
       console.error('Error loading symptoms:', err)
+    }
+  }
+
+  const loadRecentDays = async () => {
+    if (!user) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('symptoms')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(7)
+      
+      if (error) throw error
+      
+      const recent = (data || [])
+        .filter(entry => entry.date !== selectedDate)
+        .slice(0, 7)
+      
+      setRecentDays(recent)
+    } catch (err) {
+      console.error('Error loading recent days:', err)
     }
   }
 
@@ -68,33 +104,30 @@ const SymptomsTracker = () => {
     setSuccess(false)
 
     try {
-      const today = getTodayDate()
       const symptomData = {
         user_id: user.id,
-        date: today,
+        date: selectedDate,
         physical_symptoms: selectedPhysical,
         emotional_symptoms: selectedEmotional,
         severity: severity,
       }
 
-      // Check if entry exists for today
-      const { data: existing } = await symptomService.getByDate(today)
+      const { data: existing } = await symptomService.getByDate(selectedDate, user.id)
       
       if (existing) {
-        // Update existing
         const { error } = await supabase
           .from('symptoms')
           .update(symptomData)
           .eq('id', existing.id)
         if (error) throw error
       } else {
-        // Create new
         const result = await symptomService.create(symptomData)
         if (result.error) throw result.error
       }
 
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
+      loadRecentDays()
     } catch (err) {
       setError(err.message || 'Failed to save symptoms')
       console.error('Error saving symptoms:', err)
@@ -103,19 +136,21 @@ const SymptomsTracker = () => {
     }
   }
 
+  const handleSelectHistoryDate = (date) => {
+    setSelectedDate(date)
+  }
+
   const toggleSymptom = (symptomName, category) => {
     if (category === 'Vasomotor' || category === 'Musculoskeletal' || 
         category === 'Energy' || category === 'Sleep' || category === 'Cardiac' ||
         category === 'Urogenital' || category === 'Metabolic' || category === 'Digestive' ||
         category === 'Immune' || category === 'Cognitive') {
-      // Physical symptoms
       setSelectedPhysical(prev =>
         prev.includes(symptomName)
           ? prev.filter(s => s !== symptomName)
           : [...prev, symptomName]
       )
     } else {
-      // Emotional symptoms
       setSelectedEmotional(prev =>
         prev.includes(symptomName)
           ? prev.filter(s => s !== symptomName)
@@ -170,6 +205,12 @@ const SymptomsTracker = () => {
   return (
     <div className="symptoms-tracker">
       <div className="page-title">Symptoms Tracker</div>
+
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
 
       <form onSubmit={handleSave}>
         <Card>
@@ -233,6 +274,37 @@ const SymptomsTracker = () => {
           {saving ? 'Saving...' : 'Save Symptoms'}
         </Button>
       </form>
+
+      {recentDays.length > 0 && (
+        <Card>
+          <div className="card-title">Recent Symptom Days</div>
+          <div className="card-subtitle">Last 7 days</div>
+          <div className="symptoms-history">
+            {recentDays.map((day) => (
+              <div
+                key={day.id}
+                className="symptom-history-item"
+                onClick={() => handleSelectHistoryDate(day.date)}
+              >
+                <div className="history-date">{formatDate(day.date)}</div>
+                <div className="history-details">
+                  <div className="history-severity">
+                    Severity: <strong>{day.severity}/10</strong>
+                  </div>
+                  <div className="history-symptoms">
+                    {(day.physical_symptoms || []).slice(0, 3).map((s, idx) => (
+                      <span key={idx} className="symptom-badge">{getSymptomEmoji(s)} {s}</span>
+                    ))}
+                    {(day.physical_symptoms || []).length > 3 && (
+                      <span className="symptom-more">+{day.physical_symptoms.length - 3} more</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

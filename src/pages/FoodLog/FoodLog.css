@@ -104,6 +104,94 @@
   font-style: italic;
 }
 
+.meal-type-section {
+  margin-bottom: 20px;
+}
+
+.meal-type-header {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--purple);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--purple-light);
+}
+
+.meal-item {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(248, 249, 253, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  margin-bottom: 10px;
+}
+
+.meal-foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.food-tag {
+  background: var(--teal-light);
+  color: var(--teal);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.meal-symptoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.symptom-tag {
+  background: #fff3cd;
+  color: #856404;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.meal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.edit-btn {
+  background: var(--purple);
+  color: white;
+}
+
+.edit-btn:hover {
+  background: #6b5b95;
+}
+
+.delete-btn {
+  background: #f44336;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: #d32f2f;
+}
+
 .form-select {
   width: 100%;
   padding: 12px;

@@ -61,3 +61,52 @@
   border: 1px solid #cfc;
 }
 
+.wellness-history {
+  margin-top: 14px;
+}
+
+.wellness-history-item {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(248, 249, 253, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wellness-history-item:hover {
+  background: var(--purple-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(123, 91, 216, 0.1);
+}
+
+.history-date {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.history-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.history-energy {
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.history-hydration {
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.history-emotions {
+  color: var(--muted);
+  font-size: 12px;
+}
+

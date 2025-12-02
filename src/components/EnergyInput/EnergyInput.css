@@ -1,0 +1,129 @@
+.energy-input {
+  width: 100%;
+}
+
+.energy-input-label {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.energy-input-loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.energy-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.energy-level-item {
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.energy-level-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.energy-level-item.selected {
+  border-width: 3px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.energy-level-item.expanded {
+  border-width: 3px;
+}
+
+.energy-level-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.energy-level-emoji {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.energy-level-content {
+  flex: 1;
+}
+
+.energy-level-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.energy-level-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.energy-level-check {
+  color: var(--purple);
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.energy-level-details {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.energy-level-mood {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.energy-level-mood strong {
+  color: var(--purple);
+}
+
+.energy-level-description {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.energy-selected-summary {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--purple-light);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--purple);
+  text-align: center;
+}
+
