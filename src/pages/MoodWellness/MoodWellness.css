@@ -1,0 +1,63 @@
+.mood-wellness {
+  padding-bottom: 20px;
+}
+
+.water-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin: 20px 0;
+}
+
+.water-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  border: none;
+  font-size: 28px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(38, 198, 218, 0.25);
+  transition: all 0.2s;
+}
+
+.water-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(38, 198, 218, 0.35);
+}
+
+.water-btn:active {
+  transform: scale(0.95);
+}
+
+.water-display {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--teal);
+  min-width: 120px;
+  text-align: center;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #fcc;
+}
+
+.success-message {
+  background: #efe;
+  color: #3c3;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #cfc;
+}
+

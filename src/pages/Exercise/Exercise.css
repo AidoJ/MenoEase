@@ -1,0 +1,24 @@
+.exercise {
+  padding-bottom: 20px;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #fcc;
+}
+
+.success-message {
+  background: #efe;
+  color: #3c3;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #cfc;
+}
+

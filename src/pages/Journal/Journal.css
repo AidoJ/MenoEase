@@ -1,0 +1,74 @@
+.journal {
+  padding-bottom: 20px;
+}
+
+.recent-entries {
+  margin-top: 14px;
+}
+
+.entry-preview {
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(248, 249, 253, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.entry-preview:hover {
+  background: var(--purple-light);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(123, 91, 216, 0.1);
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.entry-date {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.entry-mood {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.entry-content {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #fcc;
+}
+
+.success-message {
+  background: #efe;
+  color: #3c3;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 16px 0;
+  border: 1px solid #cfc;
+}
+

@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
 import { supabase } from '../../config/supabase'
+import { getTodayDate, calculateSleepDuration } from '../../utils/helpers'
 import './Dashboard.css'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
-    sleep: '7.5h',
-    energy: '😊',
-    water: '1.8L',
-    meals: '3/3',
+    sleep: '--',
+    energy: '--',
+    water: '--',
+    meals: '0/0',
   })
+  const [streak, setStreak] = useState(0)
+  const [completion, setCompletion] = useState(0)
 
   const quickActions = [
     { icon: '🌙', label: 'Sleep', path: '/sleep' },
@@ -26,12 +32,147 @@ const Dashboard = () => {
   ]
 
   useEffect(() => {
-    // TODO: Fetch actual stats from Supabase
-    loadDashboardData()
-  }, [])
+    if (user) {
+      loadDashboardData()
+    }
+  }, [user])
 
   const loadDashboardData = async () => {
-    // TODO: Implement data fetching
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const today = getTodayDate()
+
+      // Load all today's data in parallel
+      const [
+        sleepData,
+        moodData,
+        foodData,
+        exerciseData,
+        medicationData,
+      ] = await Promise.all([
+        supabase.from('sleep_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
+        supabase.from('mood_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
+        supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', today),
+        supabase.from('exercises').select('*').eq('user_id', user.id).eq('date', today),
+        supabase.from('medication_logs').select('*').eq('user_id', user.id).eq('date', today),
+      ])
+
+      // Calculate sleep duration
+      let sleepDisplay = '--'
+      if (sleepData.data && sleepData.data.bedtime && sleepData.data.wake_time) {
+        const duration = calculateSleepDuration(
+          `2000-01-01T${sleepData.data.bedtime}:00`,
+          `2000-01-01T${sleepData.data.wake_time}:00`
+        )
+        if (duration) {
+          sleepDisplay = `${duration.hours}h ${duration.minutes}m`
+        }
+      }
+
+      // Get energy level
+      let energyDisplay = '--'
+      if (moodData.data) {
+        const energyMap = {
+          crashed: '😴',
+          low: '😐',
+          ok: '🙂',
+          energised: '⚡',
+        }
+        energyDisplay = energyMap[moodData.data.energy_level] || '--'
+      }
+
+      // Get hydration
+      let waterDisplay = '--'
+      if (moodData.data && moodData.data.hydration_liters) {
+        waterDisplay = `${moodData.data.hydration_liters.toFixed(1)}L`
+      }
+
+      // Count meals
+      const mealCount = foodData.data?.length || 0
+      const mealsDisplay = `${mealCount}/3`
+
+      setStats({
+        sleep: sleepDisplay,
+        energy: energyDisplay,
+        water: waterDisplay,
+        meals: mealsDisplay,
+      })
+
+      // Calculate streak
+      const streakCount = await calculateStreak(user.id)
+      setStreak(streakCount)
+
+      // Calculate completion percentage
+      const completed = [
+        sleepData.data ? 1 : 0,
+        moodData.data ? 1 : 0,
+        mealCount > 0 ? 1 : 0,
+        exerciseData.data && exerciseData.data.length > 0 ? 1 : 0,
+        medicationData.data && medicationData.data.length > 0 ? 1 : 0,
+      ].reduce((a, b) => a + b, 0)
+      
+      setCompletion(Math.round((completed / 5) * 100))
+    } catch (err) {
+      console.error('Error loading dashboard data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const calculateStreak = async (userId) => {
+    try {
+      // Get all unique dates with any logged data
+      const [sleep, mood, food, exercise, journal] = await Promise.all([
+        supabase.from('sleep_logs').select('date').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('mood_logs').select('date').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('food_logs').select('date').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('exercises').select('date').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('journal_entries').select('date').eq('user_id', userId).order('date', { ascending: false }),
+      ])
+
+      // Combine all dates
+      const allDates = new Set()
+      ;[sleep, mood, food, exercise, journal].forEach(result => {
+        if (result.data) {
+          result.data.forEach(item => allDates.add(item.date))
+        }
+      })
+
+      // Sort dates descending
+      const sortedDates = Array.from(allDates).sort((a, b) => b.localeCompare(a))
+      
+      // Calculate consecutive days from today backwards
+      let streak = 0
+      const today = getTodayDate()
+      let currentDate = new Date(today)
+      
+      for (let i = 0; i < sortedDates.length; i++) {
+        const dateStr = getTodayDate(currentDate)
+        if (sortedDates.includes(dateStr)) {
+          streak++
+          currentDate.setDate(currentDate.getDate() - 1)
+        } else {
+          break
+        }
+      }
+
+      return streak
+    } catch (err) {
+      console.error('Error calculating streak:', err)
+      return 0
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard">
+        <Card>
+          <p>Loading dashboard...</p>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -89,13 +230,13 @@ const Dashboard = () => {
           <div className="card-title">Tracking Streak</div>
         </div>
         <p style={{ fontSize: '14px', marginBottom: '10px' }}>
-          You've logged data for <strong>7 days</strong> in a row! 🎉
+          You've logged data for <strong>{streak} {streak === 1 ? 'day' : 'days'}</strong> in a row! {streak > 0 && '🎉'}
         </p>
         <div className="progress-bar">
-          <div className="progress-fill" style={{ width: '70%' }}></div>
+          <div className="progress-fill" style={{ width: `${completion}%` }}></div>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '8px' }}>
-          70% of daily goals completed
+          {completion}% of daily goals completed
         </p>
       </Card>
     </div>
@@ -103,4 +244,3 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-

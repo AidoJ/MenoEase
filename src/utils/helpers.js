@@ -19,8 +19,9 @@ export const formatTime = (time) => {
   }
 }
 
-export const getTodayDate = () => {
-  return format(new Date(), 'yyyy-MM-dd')
+export const getTodayDate = (date = null) => {
+  const dateObj = date ? (typeof date === 'string' ? new Date(date) : date) : new Date()
+  return format(dateObj, 'yyyy-MM-dd')
 }
 
 export const calculateSleepDuration = (bedtime, wakeTime) => {

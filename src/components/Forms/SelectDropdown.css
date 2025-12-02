@@ -1,0 +1,121 @@
+.select-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.select-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.required {
+  color: #e74c3c;
+  margin-left: 4px;
+}
+
+.select-trigger {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  font-size: 15px;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.select-trigger:hover:not(.disabled) {
+  border-color: var(--purple);
+}
+
+.select-trigger.open {
+  border-color: var(--purple);
+}
+
+.select-trigger.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.select-trigger .placeholder {
+  color: var(--muted);
+}
+
+.arrow {
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.select-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  box-shadow: 0 4px 16px rgba(15, 15, 40, 0.1);
+  z-index: 1000;
+  max-height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.select-search {
+  padding: 12px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.select-options {
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.select-option {
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.select-option:hover {
+  background: var(--purple-light);
+}
+
+.select-option.selected {
+  background: var(--purple-light);
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.select-option.no-results {
+  color: var(--muted);
+  cursor: default;
+  font-style: italic;
+}
+
+.select-option.no-results:hover {
+  background: transparent;
+}
+
+.check {
+  color: var(--purple);
+  font-weight: 700;
+}
+

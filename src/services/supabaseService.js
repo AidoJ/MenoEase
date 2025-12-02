@@ -41,11 +41,15 @@ export const foodService = {
     return { data: result, error }
   },
 
-  async getByDate(date) {
-    const { data, error } = await supabase
+  async getByDate(date, userId = null) {
+    let query = supabase
       .from('food_logs')
       .select('*')
       .eq('date', date)
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+    const { data, error } = await query
     return { data, error }
   },
 }
@@ -61,11 +65,15 @@ export const symptomService = {
     return { data: result, error }
   },
 
-  async getByDate(date) {
-    const { data, error } = await supabase
+  async getByDate(date, userId = null) {
+    let query = supabase
       .from('symptoms')
       .select('*')
       .eq('date', date)
+    if (userId) {
+      query = query.eq('user_id', userId)
+    }
+    const { data, error } = await query.single()
     return { data, error }
   },
 }

@@ -1,0 +1,128 @@
+.multi-select {
+  position: relative;
+  width: 100%;
+}
+
+.multi-select-label {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.multi-select-trigger {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  font-size: 15px;
+  font-family: inherit;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.multi-select-trigger:hover {
+  border-color: var(--purple);
+}
+
+.multi-select-trigger.open {
+  border-color: var(--purple);
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+.multi-select-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  box-shadow: 0 4px 16px rgba(15, 15, 40, 0.1);
+  z-index: 1000;
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.multi-select-options {
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.multi-select-option {
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.2s;
+}
+
+.multi-select-option:hover {
+  background: var(--purple-light);
+}
+
+.multi-select-option.selected {
+  background: var(--purple-light);
+}
+
+.checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--purple);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.multi-select-option.selected .checkbox {
+  background: var(--purple);
+}
+
+.check {
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.selected-preview {
+  padding: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: var(--purple-light);
+}
+
+.selected-preview-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.selected-tag {
+  background: white;
+  color: var(--purple);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
