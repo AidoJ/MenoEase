@@ -28,6 +28,24 @@ const FoodLog = () => {
   const [postMealSymptoms, setPostMealSymptoms] = useState([])
   const [customFoodName, setCustomFoodName] = useState('')
   const [showCustomFoodInput, setShowCustomFoodInput] = useState(false)
+  const [showSaveToMasterPrompt, setShowSaveToMasterPrompt] = useState(false)
+  const [customFoodToSave, setCustomFoodToSave] = useState(null)
+  
+  // Quantity structure: { amount: '', unit: '' }
+  const quantityUnits = [
+    { value: '', label: 'No unit' },
+    { value: 'g', label: 'grams (g)' },
+    { value: 'kg', label: 'kilograms (kg)' },
+    { value: 'ml', label: 'milliliters (ml)' },
+    { value: 'L', label: 'liters (L)' },
+    { value: 'cup', label: 'cup(s)' },
+    { value: 'tbsp', label: 'tablespoon(s)' },
+    { value: 'tsp', label: 'teaspoon(s)' },
+    { value: 'oz', label: 'ounce(s)' },
+    { value: 'lb', label: 'pound(s)' },
+    { value: 'piece', label: 'piece(s)' },
+    { value: 'slice', label: 'slice(s)' },
+  ]
 
   const postMealSymptomOptions = [
     { value: 'Hot Flash', emoji: '🔥', label: 'Hot Flash' },
@@ -96,7 +114,7 @@ const FoodLog = () => {
 
   const addFood = (food) => {
     if (!selectedFoods.find(f => f.id === food.id)) {
-      setSelectedFoods([...selectedFoods, { ...food, quantity: '' }])
+      setSelectedFoods([...selectedFoods, { ...food, quantity: { amount: '', unit: '' } }])
     }
   }
 
@@ -111,11 +129,14 @@ const FoodLog = () => {
       name: customFoodName.trim(),
       category: getCategoryForMealType(mealType) || 'Other',
       isCustom: true,
-      quantity: ''
+      quantity: { amount: '', unit: '' }
     }
 
     if (!selectedFoods.find(f => f.id === customFood.id && f.name.toLowerCase() === customFood.name.toLowerCase())) {
       setSelectedFoods([...selectedFoods, customFood])
+      // Prompt to save to master list
+      setCustomFoodToSave(customFood)
+      setShowSaveToMasterPrompt(true)
       setCustomFoodName('')
       setShowCustomFoodInput(false)
       setError('')
@@ -124,10 +145,60 @@ const FoodLog = () => {
     }
   }
 
-  const updateFoodQuantity = (foodId, quantity) => {
-    setSelectedFoods(selectedFoods.map(f => 
-      f.id === foodId ? { ...f, quantity: quantity } : f
-    ))
+  const saveCustomFoodToMaster = async () => {
+    if (!customFoodToSave) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('food_items')
+        .insert([{
+          name: customFoodToSave.name,
+          category: customFoodToSave.category
+        }])
+        .select()
+        .single()
+      
+      if (error) {
+        // If it's a duplicate, that's okay
+        if (error.code !== '23505') {
+          console.error('Error saving to master:', error)
+        }
+      } else {
+        // Update the food item in selectedFoods to use the new ID
+        setSelectedFoods(selectedFoods.map(f => 
+          f.id === customFoodToSave.id 
+            ? { ...f, id: data.id, isCustom: false }
+            : f
+        ))
+        // Reload food items to include the new one
+        loadFoodItems()
+      }
+      setShowSaveToMasterPrompt(false)
+      setCustomFoodToSave(null)
+    } catch (err) {
+      console.error('Error saving custom food:', err)
+    }
+  }
+
+  const updateFoodQuantity = (foodId, field, value) => {
+    setSelectedFoods(selectedFoods.map(f => {
+      if (f.id === foodId) {
+        const currentQty = f.quantity || { amount: '', unit: '' }
+        return { 
+          ...f, 
+          quantity: { ...currentQty, [field]: value }
+        }
+      }
+      return f
+    }))
+  }
+  
+  const formatQuantity = (quantity) => {
+    if (!quantity) return ''
+    if (typeof quantity === 'string') return quantity // Backward compatibility
+    const { amount, unit } = quantity
+    if (!amount) return ''
+    return unit ? `${amount} ${unit}` : amount
   }
 
   const removeFood = (foodId) => {
@@ -164,7 +235,9 @@ const FoodLog = () => {
           id: f.id, 
           name: f.name, 
           category: f.category,
-          quantity: f.quantity || null,
+          quantity: f.quantity || null, // Can be string (backward compat) or {amount, unit}
+          quantityAmount: typeof f.quantity === 'object' ? f.quantity.amount : null,
+          quantityUnit: typeof f.quantity === 'object' ? f.quantity.unit : null,
           isCustom: f.isCustom || false
         })),
         post_meal_symptoms: postMealSymptoms,
@@ -192,13 +265,24 @@ const FoodLog = () => {
   const handleEditMeal = (meal) => {
     setMealType(meal.meal_type || 'Breakfast')
     if (meal.foods) {
-      const foods = meal.foods.map(f => ({
-        id: f.id || f.name,
-        name: f.name,
-        category: f.category,
-        quantity: f.quantity || '',
-        isCustom: f.isCustom || false
-      }))
+      const foods = meal.foods.map(f => {
+        // Handle both old string format and new object format
+        let quantity = f.quantity || ''
+        if (f.quantityAmount !== undefined || f.quantityUnit !== undefined) {
+          quantity = { amount: f.quantityAmount || '', unit: f.quantityUnit || '' }
+        } else if (typeof f.quantity === 'string') {
+          // Keep as string for backward compatibility
+          quantity = f.quantity
+        }
+        
+        return {
+          id: f.id || f.name,
+          name: f.name,
+          category: f.category,
+          quantity: quantity,
+          isCustom: f.isCustom || false
+        }
+      })
       setSelectedFoods(foods)
     }
     if (meal.post_meal_symptoms) {
@@ -297,11 +381,16 @@ const FoodLog = () => {
               {meals.map((meal) => (
                 <div key={meal.id} className="meal-item">
                   <div className="meal-foods">
-                    {meal.foods?.map((food, idx) => (
-                      <span key={idx} className="food-tag">
-                        {food.name}{food.quantity && ` (${food.quantity})`}
-                      </span>
-                    ))}
+                    {meal.foods?.map((food, idx) => {
+                      const qtyDisplay = typeof food.quantity === 'object' 
+                        ? (food.quantity.amount ? `${food.quantity.amount}${food.quantity.unit ? ' ' + food.quantity.unit : ''}` : '')
+                        : (food.quantity || '')
+                      return (
+                        <span key={idx} className="food-tag">
+                          {food.name}{qtyDisplay && ` (${qtyDisplay})`}
+                        </span>
+                      )
+                    })}
                   </div>
                   {meal.post_meal_symptoms && meal.post_meal_symptoms.length > 0 && (
                     <div className="meal-symptoms">
@@ -469,33 +558,82 @@ const FoodLog = () => {
           {selectedFoods.length > 0 && (
             <div className="added-items">
               <div className="form-label">This Meal:</div>
-              {selectedFoods.map((food) => (
-                <div key={food.id} className="added-item">
-                  <div className="food-info">
-                    <div className="name">
-                      {food.name}
-                      {food.isCustom && <span className="custom-badge">Custom</span>}
+              {selectedFoods.map((food) => {
+                const qty = food.quantity || { amount: '', unit: '' }
+                const amount = typeof qty === 'object' ? qty.amount : (qty || '')
+                const unit = typeof qty === 'object' ? qty.unit : ''
+                
+                return (
+                  <div key={food.id} className="added-item">
+                    <div className="food-info">
+                      <div className="name">
+                        {food.name}
+                        {food.isCustom && <span className="custom-badge">Custom</span>}
+                      </div>
+                      <div className="category">{food.category}</div>
                     </div>
-                    <div className="category">{food.category}</div>
+                    <div className="food-quantity-inputs">
+                      <input
+                        type="text"
+                        className="quantity-amount-input"
+                        placeholder="Amount"
+                        value={amount}
+                        onChange={(e) => updateFoodQuantity(food.id, 'amount', e.target.value)}
+                      />
+                      <select
+                        className="quantity-unit-select"
+                        value={unit}
+                        onChange={(e) => updateFoodQuantity(food.id, 'unit', e.target.value)}
+                      >
+                        {quantityUnits.map(u => (
+                          <option key={u.value} value={u.value}>{u.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      className="remove-btn"
+                      onClick={() => removeFood(food.id)}
+                    >
+                      Remove
+                    </button>
                   </div>
-                  <div className="food-quantity-input">
-                    <input
-                      type="text"
-                      className="quantity-input"
-                      placeholder="e.g., 2, 100g, 1 cup"
-                      value={food.quantity || ''}
-                      onChange={(e) => updateFoodQuantity(food.id, e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => removeFood(food.id)}
-                  >
-                    Remove
-                  </button>
+                )
+              })}
+            </div>
+          )}
+          
+          {/* Prompt to save custom food to master list */}
+          {showSaveToMasterPrompt && customFoodToSave && (
+            <div className="save-to-master-modal">
+              <div className="modal-content">
+                <div className="modal-title">Save to Food List?</div>
+                <div className="modal-message">
+                  Would you like to save <strong>"{customFoodToSave.name}"</strong> to your food list 
+                  so you can easily find it again? It will be saved in the <strong>{customFoodToSave.category}</strong> category.
                 </div>
-              ))}
+                <div className="modal-actions">
+                  <Button
+                    type="button"
+                    variant="teal"
+                    onClick={saveCustomFoodToMaster}
+                    style={{ flex: 1 }}
+                  >
+                    Yes, Save It
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowSaveToMasterPrompt(false)
+                      setCustomFoodToSave(null)
+                    }}
+                    style={{ flex: 1 }}
+                  >
+                    No Thanks
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 

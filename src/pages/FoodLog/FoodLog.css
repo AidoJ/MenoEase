@@ -171,13 +171,15 @@
   text-transform: uppercase;
 }
 
-.food-quantity-input {
+.food-quantity-inputs {
+  display: flex;
+  gap: 6px;
   flex: 1;
   margin: 0 8px;
 }
 
-.quantity-input {
-  width: 100%;
+.quantity-amount-input {
+  flex: 1;
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid rgba(123, 91, 216, 0.2);
@@ -185,14 +187,71 @@
   box-sizing: border-box;
 }
 
-.quantity-input:focus {
+.quantity-amount-input:focus {
   outline: none;
   border-color: var(--purple);
 }
 
-.quantity-input::placeholder {
+.quantity-amount-input::placeholder {
   color: var(--muted);
   font-size: 12px;
+}
+
+.quantity-unit-select {
+  min-width: 120px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(123, 91, 216, 0.2);
+  font-size: 13px;
+  background: white;
+  cursor: pointer;
+}
+
+.quantity-unit-select:focus {
+  outline: none;
+  border-color: var(--purple);
+}
+
+.save-to-master-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--purple);
+  margin-bottom: 12px;
+}
+
+.modal-message {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .meal-type-section {

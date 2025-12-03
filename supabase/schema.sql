@@ -33,8 +33,9 @@ CREATE TABLE IF NOT EXISTS food_logs (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   meal_type VARCHAR(20), -- 'Breakfast', 'Lunch', 'Dinner', 'Snack'
-  foods JSONB, -- Array of food items: [{id, name, category, quantity, isCustom}, ...]
-  -- Example: [{"id": 1, "name": "Eggs", "category": "Breakfast", "quantity": "2", "isCustom": false}, ...]
+  foods JSONB, -- Array of food items: [{id, name, category, quantity, quantityAmount, quantityUnit, isCustom}, ...]
+  -- Example: [{"id": 1, "name": "Eggs", "category": "Breakfast", "quantity": {"amount": "2", "unit": "piece"}, "quantityAmount": "2", "quantityUnit": "piece", "isCustom": false}, ...]
+  -- Note: quantity can be string (backward compat) or object {amount, unit}. quantityAmount/quantityUnit are stored separately for easier querying.
   post_meal_symptoms JSONB, -- Array of symptoms
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

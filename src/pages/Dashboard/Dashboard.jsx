@@ -64,13 +64,26 @@ const Dashboard = () => {
 
       // Calculate sleep duration
       let sleepDisplay = '--'
-      if (sleepData.data && sleepData.data.bedtime && sleepData.data.wake_time) {
-        const duration = calculateSleepDuration(
-          `2000-01-01T${sleepData.data.bedtime}:00`,
-          `2000-01-01T${sleepData.data.wake_time}:00`
-        )
-        if (duration && !isNaN(duration.hours) && !isNaN(duration.minutes)) {
-          sleepDisplay = `${duration.hours}h ${duration.minutes}m`
+      if (sleepData.data) {
+        const bedtime = sleepData.data.bedtime
+        const wakeTime = sleepData.data.wake_time
+        
+        // Handle both TIME and string formats
+        const bedtimeStr = typeof bedtime === 'string' ? bedtime : (bedtime ? String(bedtime) : null)
+        const wakeTimeStr = typeof wakeTime === 'string' ? wakeTime : (wakeTime ? String(wakeTime) : null)
+        
+        if (bedtimeStr && wakeTimeStr) {
+          // Ensure time format is correct (HH:MM:SS or HH:MM)
+          const bedFormatted = bedtimeStr.includes(':') ? bedtimeStr.split('.')[0] : bedtimeStr
+          const wakeFormatted = wakeTimeStr.includes(':') ? wakeTimeStr.split('.')[0] : wakeTimeStr
+          
+          const duration = calculateSleepDuration(
+            `2000-01-01T${bedFormatted.padEnd(8, ':00').substring(0, 8)}`,
+            `2000-01-01T${wakeFormatted.padEnd(8, ':00').substring(0, 8)}`
+          )
+          if (duration && !isNaN(duration.hours) && !isNaN(duration.minutes) && duration.hours >= 0 && duration.minutes >= 0) {
+            sleepDisplay = `${duration.hours}h ${duration.minutes}m`
+          }
         }
       }
 
