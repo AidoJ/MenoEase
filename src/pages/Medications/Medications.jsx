@@ -1,25 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSearchParams } from 'react-router-dom'
 import { medicationService } from '../../services/supabaseService'
 import { getMedicationsMaster, getMedicationCategories } from '../../services/masterDataService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
-import { getTodayDate } from '../../utils/helpers'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
+import { getTodayDate, formatDate } from '../../utils/helpers'
 import { supabase } from '../../config/supabase'
 import './Medications.css'
 
 const Medications = () => {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
   
   const [medications, setMedications] = useState([])
   const [medicationsMaster, setMedicationsMaster] = useState([])
   const [categories, setCategories] = useState([])
   const [selectedCategory, setSelectedCategory] = useState('Prescription Medications (Hormonal)')
-  const [todayLogs, setTodayLogs] = useState([])
+  const [dateLogs, setDateLogs] = useState([])
   const [showAddModal, setShowAddModal] = useState(false)
   const [newMedName, setNewMedName] = useState('')
   const [selectedMasterMed, setSelectedMasterMed] = useState('')
@@ -31,6 +35,24 @@ const Medications = () => {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    // Reload logs when date changes
+    const loadDateLogs = async () => {
+      if (!user) return
+      try {
+        const { data: logs } = await supabase
+          .from('medication_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', selectedDate)
+        setDateLogs(logs || [])
+      } catch (err) {
+        console.error('Error loading date logs:', err)
+      }
+    }
+    loadDateLogs()
+  }, [selectedDate, user])
 
   useEffect(() => {
     // Reload medications when category changes
@@ -64,15 +86,14 @@ const Medications = () => {
       setCategories(catsData.data || [])
       setMedicationsMaster(medsMaster.data || [])
 
-      // Load today's medication logs
-      const today = getTodayDate()
+      // Load selected date's medication logs
       const { data: logs } = await supabase
         .from('medication_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', today)
+        .eq('date', selectedDate)
       
-      setTodayLogs(logs || [])
+      setDateLogs(logs || [])
     } catch (err) {
       console.error('Error loading medications:', err)
       setError(err.message || 'Failed to load medications')
@@ -84,13 +105,12 @@ const Medications = () => {
   const toggleMedication = async (medicationId) => {
     if (!user) return
 
-    const today = getTodayDate()
-    const isTaken = todayLogs.some(log => log.medication_id === medicationId)
+    const isTaken = dateLogs.some(log => log.medication_id === medicationId)
 
     try {
       if (isTaken) {
         // Remove log
-        const logToDelete = todayLogs.find(log => log.medication_id === medicationId)
+        const logToDelete = dateLogs.find(log => log.medication_id === medicationId)
         if (logToDelete) {
           const { error } = await supabase
             .from('medication_logs')
@@ -102,18 +122,18 @@ const Medications = () => {
         // Add log
         const { error } = await medicationService.logDose(medicationId, {
           user_id: user.id,
-          date: today,
+          date: selectedDate,
         })
         if (error) throw error
       }
       
-      // Reload today's logs
+      // Reload date's logs
       const { data: logs } = await supabase
         .from('medication_logs')
         .select('*')
         .eq('user_id', user.id)
-        .eq('date', today)
-      setTodayLogs(logs || [])
+        .eq('date', selectedDate)
+      setDateLogs(logs || [])
     } catch (err) {
       console.error('Error toggling medication:', err)
       setError(err.message || 'Failed to update medication log')
@@ -134,9 +154,9 @@ const Medications = () => {
     setError('')
     
     try {
-      // Get category from master med if selected, otherwise use custom category
+      // Get category from master med if selected, otherwise use selected category
       const masterMed = medicationsMaster.find(m => m.name === medName)
-      const medCategory = masterMed?.category || newMedCategory
+      const medCategory = masterMed?.category || selectedCategory
       
       const medData = {
         user_id: user.id,
@@ -197,7 +217,7 @@ const Medications = () => {
   }
 
   const isMedicationTaken = (medicationId) => {
-    return todayLogs.some(log => log.medication_id === medicationId)
+    return dateLogs.some(log => log.medication_id === medicationId)
   }
 
   if (loading) {
@@ -214,6 +234,11 @@ const Medications = () => {
   return (
     <div className="medications">
       <div className="page-title">Medications/Supplements</div>
+      
+      <DateNavigator
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
 
       <Card>
         <div className="card-title">Add Medication/Supplement</div>
@@ -243,7 +268,7 @@ const Medications = () => {
           </Button>
         </div>
 
-        <div className="card-title">Today's Schedule</div>
+        <div className="card-title">Schedule for {formatDate(selectedDate)}</div>
         <div className="card-subtitle">Track your medications & supplements</div>
 
         <div className="med-list">
@@ -333,18 +358,6 @@ const Medications = () => {
                       placeholder="e.g., Custom Medication Name"
                       style={{ marginTop: '8px' }}
                     />
-                    <div className="form-group" style={{ marginTop: '8px' }}>
-                      <label>Category</label>
-                      <select
-                        className="form-select"
-                        value={newMedCategory}
-                        onChange={(e) => setNewMedCategory(e.target.value)}
-                      >
-                        {categories.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                 )}
               </div>

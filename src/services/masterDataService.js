@@ -96,11 +96,18 @@ export const getSymptomsMasterByCategory = async () => {
 }
 
 // Fetch all exercises from master table
-export const getExercisesMaster = async () => {
-  const { data, error } = await supabase
+export const getExercisesMaster = async (category = null) => {
+  let query = supabase
     .from('exercises_master')
     .select('*')
-    .order('name', { ascending: true })
+  
+  if (category) {
+    query = query.eq('category', category)
+  }
+  
+  query = query.order('name', { ascending: true })
+  
+  const { data, error } = await query
   
   if (error) {
     console.error('Error fetching exercises master:', error)
@@ -108,6 +115,22 @@ export const getExercisesMaster = async () => {
   }
   
   return { data, error: null }
+}
+
+// Fetch all unique categories from exercises master
+export const getExerciseCategories = async () => {
+  const { data, error } = await supabase
+    .from('exercises_master')
+    .select('category')
+  
+  if (error) {
+    console.error('Error fetching exercise categories:', error)
+    return { data: [], error }
+  }
+  
+  // Get unique categories
+  const uniqueCategories = [...new Set(data.map(item => item.category).filter(Boolean))]
+  return { data: uniqueCategories.sort(), error: null }
 }
 
 // Fetch all therapies from master table

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useSearchParams } from 'react-router-dom'
 import { exerciseService } from '../../services/supabaseService'
-import { getExercisesMaster } from '../../services/masterDataService'
+import { getExercisesMaster, getExerciseCategories } from '../../services/masterDataService'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
 import DateNavigator from '../../components/DateNavigator/DateNavigator'
@@ -22,10 +22,14 @@ const Exercise = () => {
   const [weeklySummary, setWeeklySummary] = useState(null)
   
   const [exercisesMaster, setExercisesMaster] = useState([])
+  const [categories, setCategories] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState('Exercises')
   const [activityType, setActivityType] = useState('')
   const [duration, setDuration] = useState('')
   const [intensity, setIntensity] = useState('moderate')
   const [notes, setNotes] = useState('')
+  const [useCustomName, setUseCustomName] = useState(false)
+  const [customActivityName, setCustomActivityName] = useState('')
 
   useEffect(() => {
     loadExercisesMaster()
@@ -37,18 +41,32 @@ const Exercise = () => {
 
   const loadExercisesMaster = async () => {
     try {
-      const { data, error } = await getExercisesMaster()
-      if (error) throw error
-      setExercisesMaster(data || [])
-      if (data && data.length > 0) {
-        setActivityType(data[0].name)
-      }
+      const [catsData, exercisesData] = await Promise.all([
+        getExerciseCategories(),
+        getExercisesMaster(selectedCategory),
+      ])
+      setCategories(catsData.data || [])
+      setExercisesMaster(exercisesData.data || [])
     } catch (err) {
       console.error('Error loading exercises master:', err)
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    // Reload exercises when category changes
+    const loadByCategory = async () => {
+      try {
+        const { data } = await getExercisesMaster(selectedCategory)
+        setExercisesMaster(data || [])
+        setActivityType('')
+      } catch (err) {
+        console.error('Error loading exercises by category:', err)
+      }
+    }
+    loadByCategory()
+  }, [selectedCategory])
 
   const loadWeeklySummary = async () => {
     if (!user) return
@@ -87,7 +105,8 @@ const Exercise = () => {
     e.preventDefault()
     if (!user) return
 
-    if (!activityType || !duration) {
+    const finalActivityType = useCustomName ? customActivityName.trim() : activityType
+    if (!finalActivityType || !duration) {
       setError('Please select activity type and enter duration')
       return
     }
@@ -97,10 +116,15 @@ const Exercise = () => {
     setSuccess(false)
 
     try {
+      // Get category from master exercise if selected, otherwise use selected category
+      const masterExercise = exercisesMaster.find(e => e.name === activityType)
+      const exerciseCategory = masterExercise?.category || selectedCategory
+
       const exerciseData = {
         user_id: user.id,
         date: selectedDate,
-        activity_type: activityType,
+        activity_type: finalActivityType,
+        category: exerciseCategory,
         duration: parseInt(duration),
         intensity: intensity,
         notes: notes || null,
@@ -115,6 +139,9 @@ const Exercise = () => {
         setDuration('')
         setNotes('')
         setIntensity('moderate')
+        setActivityType('')
+        setCustomActivityName('')
+        setUseCustomName(false)
         loadWeeklySummary()
       }, 2000)
     } catch (err) {
@@ -135,7 +162,7 @@ const Exercise = () => {
   if (loading) {
     return (
       <div className="exercise">
-        <div className="page-title">Exercise & Activity</div>
+        <div className="page-title">Exercise & Therapies</div>
         <Card>
           <p>Loading...</p>
         </Card>
@@ -145,7 +172,7 @@ const Exercise = () => {
 
   return (
     <div className="exercise">
-      <div className="page-title">Exercise & Activity</div>
+      <div className="page-title">Exercise & Therapies</div>
 
       <DateNavigator 
         selectedDate={selectedDate}
@@ -188,23 +215,67 @@ const Exercise = () => {
 
       <Card>
         <form onSubmit={handleSave}>
-          <div className="card-title">Log Activity</div>
+          <div className="card-title">Log Activity or Therapy</div>
 
           <div className="form-group">
-            <div className="form-label">Activity Type</div>
+            <div className="form-label">Category</div>
+            <select
+              className="form-select"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <div className="form-label">Select from {selectedCategory}</div>
             <select
               className="form-select"
               value={activityType}
               onChange={(e) => setActivityType(e.target.value)}
-              required
+              disabled={useCustomName}
             >
-              <option value="">Select activity...</option>
+              <option value="">Choose from list...</option>
               {exercisesMaster.map((exercise) => (
                 <option key={exercise.id} value={exercise.name}>
                   {exercise.name}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group" style={{ textAlign: 'center', margin: '12px 0' }}>
+            <span style={{ color: 'var(--muted)', fontSize: '14px' }}>OR</span>
+          </div>
+
+          <div className="form-group">
+            <label>
+              <input
+                type="checkbox"
+                checked={useCustomName}
+                onChange={(e) => {
+                  setUseCustomName(e.target.checked)
+                  if (e.target.checked) {
+                    setActivityType('')
+                  }
+                }}
+                style={{ marginRight: '8px' }}
+              />
+              Enter Custom Name
+            </label>
+            {useCustomName && (
+              <input
+                type="text"
+                className="form-input"
+                value={customActivityName}
+                onChange={(e) => setCustomActivityName(e.target.value)}
+                placeholder="e.g., Custom Activity Name"
+                style={{ marginTop: '8px' }}
+              />
+            )}
           </div>
 
           <div className="form-group">
