@@ -217,3 +217,6 @@ INSERT INTO food_items (name, category) VALUES
 ('High-carb meals', 'Other')
 ON CONFLICT DO NOTHING;
 
+
+
+

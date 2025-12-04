@@ -5,3 +5,6 @@ ALTER TABLE exercises
 -- Add comment
 COMMENT ON COLUMN exercises.category IS 'Category from exercises_master (e.g., Exercises, Conventional Therapies, Alternative & Complementary Therapies)';
 
+
+
+

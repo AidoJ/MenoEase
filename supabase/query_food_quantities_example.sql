@@ -108,3 +108,6 @@ ORDER BY fl.date DESC;
 -- - All data is fully queryable using PostgreSQL JSONB operators
 -- ============================================
 
+
+
+

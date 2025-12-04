@@ -80,3 +80,6 @@ You can also add them in `netlify.toml` (but this is less secure for production)
 3. **Verify Supabase project** - Is it active and accessible?
 4. **Try redeploying** - Clear cache and redeploy
 
+
+
+

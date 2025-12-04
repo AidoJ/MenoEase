@@ -57,3 +57,6 @@ The user tables (`medications`, `symptoms`, etc.) remain empty until users start
 2. Then run `seed_data.sql`
 3. Check that the file says `medications_master` not `medications`
 
+
+
+

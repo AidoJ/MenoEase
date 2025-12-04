@@ -38,3 +38,6 @@ ON CONFLICT (value) DO UPDATE SET
   mood = EXCLUDED.mood,
   description = EXCLUDED.description;
 
+
+
+

@@ -103,3 +103,6 @@ Make sure your Netlify environment variables are correct:
 - The `user_settings` table is separate - it's for user preferences, not authentication
 - Users appear in Supabase → Authentication → Users automatically after signup
 
+
+
+

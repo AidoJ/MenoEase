@@ -50,3 +50,6 @@ SET features = jsonb_set(
 )
 WHERE tier_code IN ('premium', 'professional');
 
+
+
+

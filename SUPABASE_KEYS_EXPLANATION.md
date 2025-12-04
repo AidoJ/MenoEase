@@ -73,3 +73,6 @@ The **anon key** is designed for frontend use because:
 
 The **service_role key** bypasses RLS and should only be used in secure server environments.
 
+
+
+

@@ -29,7 +29,12 @@ dist-ssr
 .env.development.local
 .env.test.local
 .env.production.local
+Variables.env
+email-templates/Variables.env
 
 # Netlify
 .netlify
+
+
+
 

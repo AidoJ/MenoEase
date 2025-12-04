@@ -100,3 +100,6 @@ npm install
 3. **Try a different port** - Edit `vite.config.js` and change port to 3001
 4. **Restart your computer** - Sometimes helps with port/firewall issues
 
+
+
+

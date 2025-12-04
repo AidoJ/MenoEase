@@ -51,3 +51,6 @@ All these new/updated files:
 2. Verify all files appear
 3. Netlify should auto-deploy if it's connected to GitHub
 
+
+
+

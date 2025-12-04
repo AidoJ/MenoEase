@@ -104,3 +104,6 @@ const EnergyInput = ({ value, onChange, label = 'Energy Level', showDescription 
 
 export default EnergyInput
 
+
+
+

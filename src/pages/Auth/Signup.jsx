@@ -63,7 +63,7 @@ const Signup = () => {
     <div className="auth-container">
       <Card>
         <div className="auth-header">
-          <h1>MenoTrak</h1>
+          <h1>MenoEase</h1>
           <p>Create your account</p>
         </div>
 

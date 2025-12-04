@@ -244,3 +244,6 @@ Would you like me to:
 
 I recommend starting with #1 and #2 (database + UI) so users can set their preferences, then we can build the actual sending logic.
 
+
+
+

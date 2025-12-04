@@ -16,7 +16,7 @@ const Header = () => {
     <header className="header">
       <div className="header-content">
         <div>
-          <h1>MenopEase</h1>
+          <h1>MenoEase</h1>
           <div className="subtitle">{today}</div>
         </div>
         {user && (

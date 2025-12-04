@@ -15,7 +15,7 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     // Load theme from localStorage or default to light
-    const savedTheme = localStorage.getItem('menotrak-theme') || 'light'
+    const savedTheme = localStorage.getItem('menoease-theme') || 'light'
     setTheme(savedTheme)
     document.documentElement.setAttribute('data-theme', savedTheme)
   }, [])
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light'
     setTheme(newTheme)
-    localStorage.setItem('menotrak-theme', newTheme)
+    localStorage.setItem('menoease-theme', newTheme)
     document.documentElement.setAttribute('data-theme', newTheme)
   }
 
@@ -33,4 +33,7 @@ export const ThemeProvider = ({ children }) => {
     </ThemeContext.Provider>
   )
 }
+
+
+
 

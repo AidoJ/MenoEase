@@ -274,7 +274,7 @@ async function sendSMSReport(toPhone, frequency, reportData) {
 
   const client = twilio(accountSid, authToken)
 
-  const message = `MenoTrak ${frequency} Report: Energy ${reportData.avgEnergy}/11, ${reportData.symptomDays} symptom days, ${reportData.mealsLogged} meals. View full report: your-app-url.netlify.app/insights`
+  const message = `MenoEase ${frequency} Report: Energy ${reportData.avgEnergy}/11, ${reportData.symptomDays} symptom days, ${reportData.mealsLogged} meals. View full report: your-app-url.netlify.app/insights`
 
   await client.messages.create({
     body: message,

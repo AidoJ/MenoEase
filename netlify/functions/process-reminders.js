@@ -247,7 +247,7 @@ async function sendSMSReminder(toPhone, message) {
   const client = twilio(accountSid, authToken)
 
   await client.messages.create({
-    body: `MenoTrak Reminder: ${message}`,
+    body: `MenoEase Reminder: ${message}`,
     from: fromPhone,
     to: toPhone,
   })

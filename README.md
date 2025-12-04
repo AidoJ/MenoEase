@@ -1,4 +1,4 @@
-# MenoTrak - Complete Menopause Tracker
+# MenoEase - Complete Menopause Tracker
 
 A comprehensive web application for tracking menopause symptoms, health metrics, and wellness data.
 
@@ -155,4 +155,7 @@ MIT
 ## Support
 
 For issues and questions, please open an issue on GitHub.
+
+
+
 
