@@ -1,7 +1,6 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
 
 [[redirects]]
   from = "/*"
@@ -11,14 +10,9 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Scheduled Functions
-[[functions]]
-  schedule = "0 * * * *"  # Every hour
-  function = "process-reminders"
-
-[[functions]]
-  schedule = "0 17 * * *"  # Daily at 5 PM
-  function = "generate-reports"
+# Note: Scheduled functions should be configured in Netlify UI
+# Go to: Site settings → Functions → Scheduled functions
+# Or use Netlify's background functions feature
 
 [[headers]]
   for = "/*"
