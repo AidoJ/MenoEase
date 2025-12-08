@@ -18,7 +18,7 @@
     "@stripe/react-stripe-js": "^2.4.0",
     "stripe": "^14.0.0",
     "emailjs-com": "^3.2.0",
-    "@emailjs/nodejs": "^1.0.1",
+    "@emailjs/nodejs": "^5.0.2",
     "twilio": "^4.19.0",
     "date-fns": "^2.30.0",
     "recharts": "^2.10.3",
