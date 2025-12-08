@@ -230,3 +230,19 @@
   box-shadow: 0 0 0 2px rgba(38, 198, 218, 0.2);
 }
 
+.sparkline-dot.clickable {
+  cursor: pointer;
+}
+
+.sparkline-dot.clickable:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 0 3px rgba(123, 91, 216, 0.3);
+}
+
+.sparkline-dot.selected {
+  border-width: 3px;
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(123, 91, 216, 0.3);
+  transform: scale(1.2);
+}
+

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import Card from '../../components/UI/Card'
 import Button from '../../components/UI/Button'
+import DateNavigator from '../../components/DateNavigator/DateNavigator'
 import { supabase } from '../../config/supabase'
 import { getTodayDate, calculateSleepDuration, formatDate } from '../../utils/helpers'
 import { format, subDays } from 'date-fns'
@@ -12,6 +13,7 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user } = useAuth()
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || getTodayDate())
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     sleep: '--',
@@ -41,14 +43,26 @@ const Dashboard = () => {
       loadDashboardData()
       loadRecentHistory()
     }
-  }, [user])
+  }, [user, selectedDate])
+
+  // Update URL when date changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams)
+    if (selectedDate !== getTodayDate()) {
+      params.set('date', selectedDate)
+    } else {
+      params.delete('date')
+    }
+    navigate(`?${params.toString()}`, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate])
 
   const loadDashboardData = async () => {
     if (!user) return
     
     setLoading(true)
     try {
-      const today = getTodayDate()
+      const dateToLoad = selectedDate || getTodayDate()
 
       const [
         sleepData,
@@ -57,11 +71,11 @@ const Dashboard = () => {
         exerciseData,
         medicationData,
       ] = await Promise.all([
-        supabase.from('sleep_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
-        supabase.from('mood_logs').select('*').eq('user_id', user.id).eq('date', today).single(),
-        supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', today),
-        supabase.from('exercises').select('*').eq('user_id', user.id).eq('date', today),
-        supabase.from('medication_logs').select('*').eq('user_id', user.id).eq('date', today),
+        supabase.from('sleep_logs').select('*').eq('user_id', user.id).eq('date', dateToLoad).single(),
+        supabase.from('mood_logs').select('*').eq('user_id', user.id).eq('date', dateToLoad).single(),
+        supabase.from('food_logs').select('*').eq('user_id', user.id).eq('date', dateToLoad),
+        supabase.from('exercises').select('*').eq('user_id', user.id).eq('date', dateToLoad),
+        supabase.from('medication_logs').select('*').eq('user_id', user.id).eq('date', dateToLoad),
       ])
 
       // Calculate sleep duration
@@ -221,39 +235,43 @@ const Dashboard = () => {
   }
 
   const handleCardClick = (type) => {
-    const today = getTodayDate()
+    const dateToUse = selectedDate || getTodayDate()
     switch(type) {
       case 'sleep':
-        navigate(`/sleep?date=${today}`)
+        navigate(`/sleep?date=${dateToUse}`)
         break
       case 'energy':
       case 'water':
-        navigate(`/track?tab=mood&date=${today}`)
+        navigate(`/mood?date=${dateToUse}`)
         break
       case 'meals':
-        navigate(`/food?date=${today}`)
+        navigate(`/food?date=${dateToUse}`)
         break
       default:
         break
     }
   }
 
+  const handleDotClick = (date) => {
+    setSelectedDate(date)
+  }
+
   const handleQuickSave = async (type, value) => {
     if (!user) return
     setSavingQuick(true)
     try {
-      const today = getTodayDate()
+      const dateToUse = selectedDate || getTodayDate()
       if (type === 'water') {
         const { data: existing } = await supabase
           .from('mood_logs')
           .select('*')
           .eq('user_id', user.id)
-          .eq('date', today)
+          .eq('date', dateToUse)
           .maybeSingle()
         
         const updateData = {
           user_id: user.id,
-          date: today,
+          date: dateToUse,
           hydration_liters: value,
           ...(existing ? {} : { energy_level: quickEnergy })
         }
@@ -269,12 +287,12 @@ const Dashboard = () => {
           .from('mood_logs')
           .select('*')
           .eq('user_id', user.id)
-          .eq('date', today)
+          .eq('date', dateToUse)
           .maybeSingle()
         
         const updateData = {
           user_id: user.id,
-          date: today,
+          date: dateToUse,
           energy_level: value,
           ...(existing ? {} : { hydration_liters: quickWater || 1.8 })
         }
@@ -304,13 +322,21 @@ const Dashboard = () => {
     )
   }
 
+  const isToday = selectedDate === getTodayDate()
+
   return (
     <div className="dashboard">
+      <DateNavigator 
+        selectedDate={selectedDate}
+        onChange={setSelectedDate}
+        maxDate={getTodayDate()}
+      />
+
       <Card>
         <div className="card-header">
           <div>
-            <div className="card-title">Today's Overview</div>
-            <div className="card-subtitle">Your daily health snapshot</div>
+            <div className="card-title">{isToday ? "Today's Overview" : formatDate(selectedDate)}</div>
+            <div className="card-subtitle">{isToday ? "Your daily health snapshot" : "Historical data for this date"}</div>
           </div>
         </div>
         <div className="stats-grid">
@@ -353,13 +379,15 @@ const Dashboard = () => {
             <div className="sparkline-label">Last 7 Days</div>
             <div className="sparkline-dots">
               {recentHistory.reverse().map((day, idx) => {
-                const isToday = day.date === getTodayDate()
+                const isTodayDate = day.date === getTodayDate()
+                const isSelected = day.date === selectedDate
                 const hasData = day.hasSleep || day.hasMood || day.hasFood || day.hasExercise
                 return (
                   <div
                     key={idx}
-                    className={`sparkline-dot ${hasData ? 'has-data' : ''} ${isToday ? 'today' : ''}`}
+                    className={`sparkline-dot ${hasData ? 'has-data' : ''} ${isTodayDate ? 'today' : ''} ${isSelected ? 'selected' : ''} clickable`}
                     title={formatDate(day.date)}
+                    onClick={() => handleDotClick(day.date)}
                   />
                 )
               })}

@@ -72,12 +72,19 @@ const SubscriptionPlans = () => {
 
       if (checkoutError) throw checkoutError
 
-      // Redirect to Stripe Checkout
+      // Option 1: Redirect to Stripe Checkout (recommended for subscriptions)
+      // Option 2: Navigate to embedded checkout page
+      // Uncomment the option you prefer:
+      
+      // Option 1: Stripe Checkout (redirect)
       if (data?.url) {
         window.location.href = data.url
       } else {
         throw new Error('No checkout URL received')
       }
+      
+      // Option 2: Embedded checkout (uncomment to use)
+      // navigate(`/subscription/checkout?tier=${tier.tier_code}&period=${billingPeriod}`)
     } catch (err) {
       console.error('Error creating checkout session:', err)
       setError(err.message || 'Failed to start checkout. Please try again.')

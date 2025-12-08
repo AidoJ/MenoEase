@@ -17,6 +17,8 @@ import CommunicationPreferences from './pages/Settings/CommunicationPreferences'
 import Reminders from './pages/Reminders/Reminders'
 import SubscriptionPlans from './pages/Subscription/SubscriptionPlans'
 import ManageSubscription from './pages/Subscription/ManageSubscription'
+import Checkout from './pages/Subscription/Checkout'
+import Success from './pages/Subscription/Success'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
@@ -51,6 +53,8 @@ function App() {
               <Route path="settings/communication" element={<CommunicationPreferences />} />
               <Route path="reminders" element={<Reminders />} />
               <Route path="subscription/plans" element={<SubscriptionPlans />} />
+              <Route path="subscription/checkout" element={<Checkout />} />
+              <Route path="subscription/success" element={<Success />} />
               <Route path="subscription/manage" element={<ManageSubscription />} />
             </Route>
           </Routes>

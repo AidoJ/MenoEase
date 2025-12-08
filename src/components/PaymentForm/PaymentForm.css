@@ -1,0 +1,91 @@
+.payment-form {
+  padding: 20px 0;
+}
+
+.payment-amount {
+  text-align: center;
+  padding: 24px;
+  background: var(--purple-light);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.amount-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.amount-value {
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--purple);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.amount-period {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.card-element-container {
+  margin-bottom: 20px;
+}
+
+.card-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.card-element-wrapper {
+  padding: 16px;
+  border: 2px solid rgba(123, 91, 216, 0.15);
+  border-radius: 12px;
+  background: white;
+  transition: all 0.2s;
+}
+
+.card-element-wrapper:focus-within {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(123, 91, 216, 0.1);
+}
+
+.payment-error {
+  padding: 12px;
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  color: #c33;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.payment-security {
+  margin-top: 24px;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.security-badge {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.security-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
