@@ -199,9 +199,10 @@ exports.handler = async (event, context) => {
     if (profile.stripe_customer_id) {
       sessionParams.customer = profile.stripe_customer_id
     } else {
-      // Create new customer
+      // For subscription mode, just set customer_email
+      // Stripe will automatically create the customer
       sessionParams.customer_email = profile.email
-      sessionParams.customer_creation = 'always'
+      // Note: customer_creation is only for 'payment' mode, not 'subscription' mode
     }
 
     // Optional: Add trial period for first-time subscribers
