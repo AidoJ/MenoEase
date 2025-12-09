@@ -16,9 +16,6 @@
  * - EMAILJS_TEMPLATE_CANCELLED
  */
 
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-const { createClient } = require('@supabase/supabase-js')
-
 // Don't initialize at module level - do it in handler
 const { createClient } = require('@supabase/supabase-js')
 const stripeLib = require('stripe')
@@ -65,8 +62,16 @@ exports.handler = async (event, context) => {
     }
   }
 
-  const sig = event.headers['stripe-signature']
+  const sig = event.headers['stripe-signature'] || event.headers['Stripe-Signature']
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+  console.log('Webhook received', {
+    method: event.httpMethod,
+    hasSignature: !!sig,
+    hasSecret: !!webhookSecret,
+    bodyType: typeof event.body,
+    bodyLength: event.body ? event.body.length : 0
+  })
 
   if (!webhookSecret) {
     console.error('STRIPE_WEBHOOK_SECRET is not set')
@@ -76,24 +81,45 @@ exports.handler = async (event, context) => {
     }
   }
 
+  if (!sig) {
+    console.error('No Stripe signature found in headers')
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'No signature header' })
+    }
+  }
+
   let stripeEvent
 
   try {
+    // Netlify functions may have body as string or already parsed
+    const body = typeof event.body === 'string' ? event.body : JSON.stringify(event.body)
+    
     // Verify webhook signature
     stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
+      body,
       sig,
       webhookSecret
     )
+    console.log('✅ Webhook signature verified successfully')
   } catch (err) {
-    console.error('Webhook signature verification failed:', err.message)
+    console.error('❌ Webhook signature verification failed:', err.message)
+    console.error('Error details:', {
+      message: err.message,
+      type: err.type,
+      hasBody: !!event.body,
+      hasSig: !!sig
+    })
     return {
       statusCode: 400,
       body: JSON.stringify({ error: `Webhook Error: ${err.message}` })
     }
   }
 
-  console.log('Received Stripe event:', stripeEvent.type)
+  console.log('✅ Received Stripe event:', stripeEvent.type, {
+    id: stripeEvent.id,
+    created: new Date(stripeEvent.created * 1000).toISOString()
+  })
 
   try {
     // Route to appropriate handler based on event type
@@ -131,10 +157,19 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ received: true })
     }
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    console.error('❌ Error processing webhook:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', {
+      message: error.message,
+      type: error.type,
+      code: error.code
+    })
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Webhook processing failed' })
+      body: JSON.stringify({ 
+        error: 'Webhook processing failed',
+        message: error.message 
+      })
     }
   }
 }
@@ -143,26 +178,46 @@ exports.handler = async (event, context) => {
  * Handle successful checkout session
  */
 async function handleCheckoutCompleted(session) {
-  console.log('Checkout completed:', session.id)
+  console.log('🛒 Checkout completed:', session.id)
+  console.log('Session data:', {
+    customer: session.customer,
+    subscription: session.subscription,
+    client_reference_id: session.client_reference_id,
+    metadata: session.metadata,
+    mode: session.mode
+  })
 
   const { customer, subscription, client_reference_id, metadata } = session
   const userId = client_reference_id || metadata?.user_id
   const tierCode = metadata?.tier_code
 
   if (!userId) {
-    console.error('No user ID found in checkout session')
+    console.error('❌ No user ID found in checkout session', {
+      client_reference_id,
+      metadata_user_id: metadata?.user_id,
+      metadata
+    })
     return
   }
+
+  console.log('👤 Processing for user:', userId, 'tier:', tierCode)
 
   // If subscription exists, fetch it to get full details
   let subscriptionData = null
   if (subscription) {
     try {
+      console.log('📋 Fetching subscription details:', subscription)
       subscriptionData = await stripe.subscriptions.retrieve(subscription)
-      console.log('Retrieved subscription:', subscriptionData.id)
+      console.log('✅ Retrieved subscription:', subscriptionData.id, {
+        status: subscriptionData.status,
+        current_period_end: new Date(subscriptionData.current_period_end * 1000).toISOString()
+      })
     } catch (err) {
-      console.error('Error retrieving subscription:', err)
+      console.error('❌ Error retrieving subscription:', err)
+      console.error('Error details:', err.message)
     }
+  } else {
+    console.log('⚠️ No subscription ID in checkout session - might be a one-time payment')
   }
 
   // Update user profile with Stripe customer ID and subscription info
@@ -189,17 +244,31 @@ async function handleCheckoutCompleted(session) {
     console.log(`Updating user ${userId} to tier ${tier} with subscription ${subscription}`)
   }
 
-  const { error: updateError } = await supabase
+  console.log('💾 Updating user profile with data:', updateData)
+  const { data: updateResult, error: updateError } = await supabase
     .from('user_profiles')
     .update(updateData)
     .eq('user_id', userId)
+    .select()
 
   if (updateError) {
-    console.error('Error updating user profile:', updateError)
+    console.error('❌ Error updating user profile:', updateError)
+    console.error('Update error details:', {
+      message: updateError.message,
+      code: updateError.code,
+      details: updateError.details,
+      hint: updateError.hint
+    })
     throw updateError
   }
 
-  console.log(`Updated user ${userId} with customer ${customer}`)
+  console.log('✅ Successfully updated user profile:', {
+    userId,
+    customer,
+    subscription: subscription || 'none',
+    tier: updateData.subscription_tier || 'not set',
+    rowsUpdated: updateResult?.length || 0
+  })
 }
 
 /**
