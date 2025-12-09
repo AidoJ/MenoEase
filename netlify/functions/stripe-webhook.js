@@ -19,13 +19,30 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const { createClient } = require('@supabase/supabase-js')
 
-// Initialize Supabase with service role key (bypasses RLS)
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+// Don't initialize at module level - do it in handler
+const { createClient } = require('@supabase/supabase-js')
+const stripeLib = require('stripe')
+
+// Initialize Supabase client (will be re-initialized in handler if env vars change)
+let supabase
+let stripe
+
+function initializeClients() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  
+  if (!supabase && supabaseUrl && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    supabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  }
+  
+  if (!stripe && process.env.STRIPE_SECRET_KEY) {
+    stripe = stripeLib(process.env.STRIPE_SECRET_KEY)
+  }
+}
 
 exports.handler = async (event, context) => {
+  // Initialize clients
+  initializeClients()
+
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
     return {
@@ -34,8 +51,30 @@ exports.handler = async (event, context) => {
     }
   }
 
+  if (!stripe || !supabase) {
+    console.error('Stripe or Supabase not initialized', {
+      hasStripe: !!stripe,
+      hasSupabase: !!supabase,
+      hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
+      hasSupabaseUrl: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    })
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Server configuration error' })
+    }
+  }
+
   const sig = event.headers['stripe-signature']
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set')
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Webhook secret not configured' })
+    }
+  }
 
   let stripeEvent
 
@@ -108,19 +147,51 @@ async function handleCheckoutCompleted(session) {
 
   const { customer, subscription, client_reference_id, metadata } = session
   const userId = client_reference_id || metadata?.user_id
+  const tierCode = metadata?.tier_code
 
   if (!userId) {
     console.error('No user ID found in checkout session')
     return
   }
 
-  // Update user profile with Stripe customer ID
+  // If subscription exists, fetch it to get full details
+  let subscriptionData = null
+  if (subscription) {
+    try {
+      subscriptionData = await stripe.subscriptions.retrieve(subscription)
+      console.log('Retrieved subscription:', subscriptionData.id)
+    } catch (err) {
+      console.error('Error retrieving subscription:', err)
+    }
+  }
+
+  // Update user profile with Stripe customer ID and subscription info
+  const updateData = {
+    stripe_customer_id: customer,
+    stripe_subscription_id: subscription
+  }
+
+  // If we have subscription data, update tier and status
+  if (subscriptionData) {
+    const priceId = subscriptionData.items.data[0].price.id
+    const tier = tierCode || await getTierFromPriceId(priceId)
+    const period = subscriptionData.items.data[0].price.recurring.interval === 'year' ? 'yearly' : 'monthly'
+    const currentPeriodEnd = new Date(subscriptionData.current_period_end * 1000)
+
+    updateData.subscription_tier = tier
+    updateData.subscription_status = subscriptionData.status
+    updateData.subscription_period = period
+    updateData.subscription_start_date = new Date(subscriptionData.start_date * 1000).toISOString().split('T')[0]
+    updateData.subscription_end_date = currentPeriodEnd.toISOString().split('T')[0]
+    updateData.stripe_price_id = priceId
+    updateData.cancel_at_period_end = subscriptionData.cancel_at_period_end
+
+    console.log(`Updating user ${userId} to tier ${tier} with subscription ${subscription}`)
+  }
+
   const { error: updateError } = await supabase
     .from('user_profiles')
-    .update({
-      stripe_customer_id: customer,
-      stripe_subscription_id: subscription
-    })
+    .update(updateData)
     .eq('user_id', userId)
 
   if (updateError) {
@@ -464,20 +535,35 @@ async function handlePaymentFailed(invoice) {
 
 /**
  * Helper: Get tier from Stripe price ID
+ * First checks price metadata, then checks database
  */
 async function getTierFromPriceId(priceId) {
-  const { data: tiers } = await supabase
-    .from('subscription_tiers')
-    .select('tier_code, stripe_price_id_monthly, stripe_price_id_yearly')
-
-  if (!tiers) return 'free'
-
-  for (const tier of tiers) {
-    if (tier.stripe_price_id_monthly === priceId || tier.stripe_price_id_yearly === priceId) {
-      return tier.tier_code
+  try {
+    // Try to get tier from price metadata (for dynamically created prices)
+    const price = await stripe.prices.retrieve(priceId)
+    if (price.metadata && price.metadata.tier_code) {
+      console.log(`Found tier ${price.metadata.tier_code} from price metadata`)
+      return price.metadata.tier_code
     }
+
+    // Fallback: Check database for pre-configured prices
+    const { data: tiers } = await supabase
+      .from('subscription_tiers')
+      .select('tier_code, stripe_price_id_monthly, stripe_price_id_yearly')
+
+    if (tiers) {
+      for (const tier of tiers) {
+        if (tier.stripe_price_id_monthly === priceId || tier.stripe_price_id_yearly === priceId) {
+          console.log(`Found tier ${tier.tier_code} from database`)
+          return tier.tier_code
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error getting tier from price ID:', error)
   }
 
+  console.log('Could not determine tier, defaulting to free')
   return 'free'
 }
 
