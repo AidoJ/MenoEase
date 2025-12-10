@@ -22,6 +22,13 @@ import Success from './pages/Subscription/Success'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
+import AdminRoute from './components/Auth/AdminRoute'
+import AdminLayout from './components/Layout/AdminLayout'
+import AdminDashboard from './pages/Admin/AdminDashboard'
+import UserManagement from './pages/Admin/UserManagement'
+import SubscriptionManagement from './pages/Admin/SubscriptionManagement'
+import TierManagement from './pages/Admin/TierManagement'
+import MasterDataManagement from './pages/Admin/MasterDataManagement'
 
 function App() {
   return (
@@ -31,6 +38,24 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminLayout />
+                </AdminRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="subscriptions" element={<SubscriptionManagement />} />
+              <Route path="tiers" element={<TierManagement />} />
+              <Route path="master-data" element={<MasterDataManagement />} />
+            </Route>
+
+            {/* User Routes */}
             <Route
               path="/"
               element={
