@@ -193,6 +193,7 @@ const Reminders = () => {
             variant="teal"
             onClick={handleAdd}
             disabled={!canAddMore}
+            style={{ width: 'auto', padding: '12px 20px', fontSize: '14px' }}
           >
             + Add Reminder
           </Button>
@@ -241,14 +242,28 @@ const Reminders = () => {
                   <Button
                     variant="secondary"
                     onClick={() => handleEdit(reminder)}
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                    style={{
+                      fontSize: '12px',
+                      padding: '8px 16px',
+                      width: 'auto',
+                      backgroundColor: '#f3f4f6',
+                      color: '#1f2937',
+                      border: '1px solid #d1d5db'
+                    }}
                   >
                     Edit
                   </Button>
                   <Button
                     variant="danger"
                     onClick={() => handleDelete(reminder.id)}
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                    style={{
+                      fontSize: '12px',
+                      padding: '8px 16px',
+                      width: 'auto',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none'
+                    }}
                   >
                     Delete
                   </Button>
