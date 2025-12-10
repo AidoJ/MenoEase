@@ -290,39 +290,36 @@ const Profile = () => {
               <div className="feature-item">
                 <span className="feature-label">Reminders:</span>
                 <span className="feature-value">
-                  {subscriptionTier.max_reminders_per_day || 0} per day
+                  {subscriptionTier.features?.reminders?.max_per_day || 0} per day
                 </span>
               </div>
               <div className="feature-item">
                 <span className="feature-label">History:</span>
                 <span className="feature-value">
-                  {subscriptionTier.features?.history_unlimited ? 'Unlimited' : 
-                   subscriptionTier.features?.history_30_days ? '30 days' : '7 days'}
+                  {subscriptionTier.features?.history_days === null ? 'Unlimited' :
+                   `${subscriptionTier.features?.history_days || 7} days`}
                 </span>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <Button 
-                variant="teal" 
-                style={{ flex: 1 }}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+              <Button
+                variant="teal"
                 onClick={() => navigate('/subscription/manage')}
               >
                 Manage Subscription
               </Button>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => navigate('/settings/communication')}
-                >
-                  Communication Settings
-                </Button>
-                <Button 
-                  variant="secondary" 
-                  onClick={() => navigate('/reminders')}
-                >
-                  Manage Reminders
-                </Button>
-              </div>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/settings/communication')}
+              >
+                Communication Settings
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/reminders')}
+              >
+                Manage Reminders
+              </Button>
             </div>
           </div>
         </Card>
