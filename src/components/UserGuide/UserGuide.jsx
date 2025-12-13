@@ -3,6 +3,7 @@ import './UserGuide.css'
 
 const UserGuide = ({ isOpen, onClose }) => {
   const [openSections, setOpenSections] = useState([0]) // First section open by default
+  const [dontShowAgain, setDontShowAgain] = useState(false)
 
   const toggleSection = (index) => {
     if (openSections.includes(index)) {
@@ -10,6 +11,13 @@ const UserGuide = ({ isOpen, onClose }) => {
     } else {
       setOpenSections([...openSections, index])
     }
+  }
+
+  const handleClose = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('dontShowUserGuide', 'true')
+    }
+    onClose()
   }
 
   if (!isOpen) return null
@@ -308,7 +316,7 @@ const UserGuide = ({ isOpen, onClose }) => {
       <div className="user-guide-modal">
         <div className="user-guide-header">
           <h2>📖 MenoEase Quick User Guide</h2>
-          <button className="user-guide-close-btn" onClick={onClose}>
+          <button className="user-guide-close-btn" onClick={handleClose}>
             ×
           </button>
         </div>
@@ -344,6 +352,18 @@ const UserGuide = ({ isOpen, onClose }) => {
         </div>
 
         <div className="user-guide-footer">
+          <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="dontShowAgain"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            <label htmlFor="dontShowAgain" style={{ cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>
+              Don't show this again
+            </label>
+          </div>
           <p>Need help? Email: support@menoease.com</p>
         </div>
       </div>

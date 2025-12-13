@@ -50,18 +50,17 @@ const Dashboard = () => {
     }
   }, [user, selectedDate])
 
-  // Show JFT card on initial load (but wait for guide to close if first time)
+  // Show JFT card on initial load (but wait for guide to close if guide is showing)
   useEffect(() => {
     if (user) {
-      const hasSeenGuide = localStorage.getItem('hasSeenUserGuide')
-      const guideClosedOnce = localStorage.getItem('guideClosedOnce')
+      const dontShowGuide = localStorage.getItem('dontShowUserGuide')
 
-      // If user has seen the guide, show JFT card immediately
-      if (hasSeenGuide && guideClosedOnce) {
+      // If user has opted out of guide, show JFT card immediately
+      if (dontShowGuide) {
         setShowJFTCard(true)
       }
 
-      // Listen for guide close event (for first-time users)
+      // Listen for guide close event (when guide is shown)
       const handleGuideClose = () => {
         setShowJFTCard(true)
       }

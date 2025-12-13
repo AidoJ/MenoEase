@@ -11,14 +11,13 @@ const Header = () => {
   const today = format(new Date(), 'EEEE, MMMM d, yyyy')
   const [showGuide, setShowGuide] = useState(false)
 
-  // Check if user has seen the guide before
+  // Show guide on every login unless user opted out
   useEffect(() => {
     if (user) {
-      const hasSeenGuide = localStorage.getItem('hasSeenUserGuide')
-      if (!hasSeenGuide) {
-        // Show guide on first login
+      const dontShowGuide = localStorage.getItem('dontShowUserGuide')
+      if (!dontShowGuide) {
+        // Show guide on login
         setShowGuide(true)
-        localStorage.setItem('hasSeenUserGuide', 'true')
       }
     }
   }, [user])
