@@ -29,6 +29,10 @@ const Header = () => {
 
   const handleGuideClose = () => {
     setShowGuide(false)
+    // Set flag so JFT card can show after guide closes
+    localStorage.setItem('guideClosedOnce', 'true')
+    // Dispatch custom event to notify Dashboard
+    window.dispatchEvent(new Event('guideClosedEvent'))
   }
 
   return (
@@ -45,7 +49,7 @@ const Header = () => {
               onClick={() => setShowGuide(true)}
               title="User Guide & Help"
             >
-              📖
+              ?
             </button>
             <button
               className="profile-btn"

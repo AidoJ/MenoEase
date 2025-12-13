@@ -127,7 +127,7 @@ const UserGuide = ({ isOpen, onClose }) => {
         <div>
           <div className="guide-callout">
             <div className="guide-callout-title">📊 The 4-Week Rule</div>
-            <p>Track consistently for at least <strong>4 weeks</strong> to unlock meaningful AI insights. This allows MenoTrak to identify patterns in:</p>
+            <p>Track consistently for at least <strong>4 weeks</strong> to unlock meaningful AI insights. This allows MenoEase to identify patterns in:</p>
             <ul>
               <li>Food triggers for hot flashes</li>
               <li>Sleep quality vs. energy levels</li>
@@ -307,7 +307,7 @@ const UserGuide = ({ isOpen, onClose }) => {
     <div className="user-guide-overlay">
       <div className="user-guide-modal">
         <div className="user-guide-header">
-          <h2>📖 MenoTrak Quick User Guide</h2>
+          <h2>📖 MenoEase Quick User Guide</h2>
           <button className="user-guide-close-btn" onClick={onClose}>
             ×
           </button>
@@ -316,7 +316,7 @@ const UserGuide = ({ isOpen, onClose }) => {
         <div className="user-guide-content">
           <div className="user-guide-intro">
             <p>
-              MenoTrak helps you understand your menopause journey by tracking symptoms,
+              MenoEase helps you understand your menopause journey by tracking symptoms,
               identifying patterns, and providing personalized insights.
             </p>
           </div>
@@ -344,7 +344,7 @@ const UserGuide = ({ isOpen, onClose }) => {
         </div>
 
         <div className="user-guide-footer">
-          <p>Need help? Email: support@menotrak.com</p>
+          <p>Need help? Email: support@menoease.com</p>
         </div>
       </div>
     </div>
