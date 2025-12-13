@@ -23,6 +23,7 @@
   font-weight: 400;
 }
 
+.help-btn,
 .profile-btn {
   width: 40px;
   height: 40px;
@@ -37,6 +38,7 @@
   justify-content: center;
 }
 
+.help-btn:hover,
 .profile-btn:hover {
   background: var(--purple-light);
   border-color: var(--purple);
