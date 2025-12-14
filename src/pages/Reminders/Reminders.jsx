@@ -433,7 +433,16 @@ const ReminderForm = ({ reminder, onSave, onCancel }) => {
           </div>
 
           <div className="modal-actions">
-            <Button type="button" variant="secondary" onClick={onCancel}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onCancel}
+              style={{
+                backgroundColor: '#f3f4f6',
+                color: '#1f2937',
+                border: '1px solid #d1d5db'
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" variant="teal">
