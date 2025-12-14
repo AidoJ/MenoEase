@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS reminders (
   reminder_type TEXT NOT NULL,
   title TEXT NOT NULL,
   message TEXT,
+  frequency TEXT DEFAULT 'one-off' CHECK (frequency IN ('one-off', 'hourly')),
   time TIME NOT NULL,
   days_of_week INTEGER[],
   is_active BOOLEAN DEFAULT true,
@@ -20,10 +21,12 @@ CREATE TABLE IF NOT EXISTS reminders (
 CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_active ON reminders(is_active);
 CREATE INDEX IF NOT EXISTS idx_reminders_type ON reminders(reminder_type);
+CREATE INDEX IF NOT EXISTS idx_reminders_frequency ON reminders(frequency);
 
 -- Add comments
 COMMENT ON TABLE reminders IS 'User reminders for medications, tracking, and check-ins';
 COMMENT ON COLUMN reminders.reminder_type IS 'Reminder type: medication, tracking, check_in, custom';
+COMMENT ON COLUMN reminders.frequency IS 'Reminder frequency: one-off (specific time) or hourly (uses communication settings)';
 COMMENT ON COLUMN reminders.days_of_week IS 'Array of days [0=Sunday, 1=Monday, ..., 6=Saturday]. Empty array = daily';
 
 -- Create reminder logs table

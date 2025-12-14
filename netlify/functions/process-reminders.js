@@ -218,17 +218,13 @@ function getUserLocalTime(utcDate, timezone) {
 
 /**
  * Check if a reminder is due based on frequency and time
+ *
+ * Reminder can be:
+ * - "hourly": fires every hour on the hour within active window (uses comm prefs)
+ * - "one-off": fires at specific reminder.time (ignores comm prefs frequency)
  */
 function checkReminderDue(reminder, currentTime, currentDayOfWeek, prefs) {
-  const reminderTime = reminder.time || '08:00'
-  const frequency = prefs.frequency || 'daily'
-  const startTime = prefs.start_time || '07:00'
-  const endTime = prefs.end_time || '22:00'
-
-  // Check if current time is within active hours
-  if (currentTime < startTime || currentTime > endTime) {
-    return false
-  }
+  const [curHour, curMin] = currentTime.split(':').map(Number)
 
   // Check if today is a scheduled day (if days_of_week is specified)
   if (reminder.days_of_week && reminder.days_of_week.length > 0) {
@@ -237,32 +233,34 @@ function checkReminderDue(reminder, currentTime, currentDayOfWeek, prefs) {
     }
   }
 
-  // Check if reminder time matches (within 5 minutes tolerance)
-  const [remHour, remMin] = reminderTime.split(':').map(Number)
-  const [curHour, curMin] = currentTime.split(':').map(Number)
-  const remMinutes = remHour * 60 + remMin
-  const curMinutes = curHour * 60 + curMin
-  const timeDiff = Math.abs(curMinutes - remMinutes)
+  // Determine reminder frequency
+  // Check reminder.frequency field first, fallback to 'one-off' if not set
+  const reminderFrequency = reminder.frequency || 'one-off'
 
-  if (timeDiff > 5) {
-    return false // Not within 5 minutes of reminder time
+  if (reminderFrequency === 'hourly') {
+    // HOURLY: Use global settings from communication_preferences
+    const startTime = prefs.start_time || '08:00'
+    const endTime = prefs.end_time || '22:00'
+
+    // Check if current time is within active hours
+    if (currentTime < startTime || currentTime > endTime) {
+      return false
+    }
+
+    // Fire at top of every hour (XX:00 or within 5 min tolerance)
+    return curMin <= 5 // Within 5 minutes of top of hour
+  } else {
+    // ONE-OFF: Use specific reminder time
+    const reminderTime = reminder.time || '08:00'
+
+    // Check if reminder time matches (within 5 minutes tolerance)
+    const [remHour, remMin] = reminderTime.split(':').map(Number)
+    const remMinutes = remHour * 60 + remMin
+    const curMinutes = curHour * 60 + curMin
+    const timeDiff = Math.abs(curMinutes - remMinutes)
+
+    return timeDiff <= 5 // Within 5 minutes of reminder time
   }
-
-  // Check frequency
-  if (frequency === 'daily') {
-    return true
-  } else if (frequency === 'hourly') {
-    return curMin === 0 // Send at top of every hour
-  } else if (frequency === 'every_2_hours') {
-    return curMin === 0 && curHour % 2 === 0
-  } else if (frequency === 'every_3_hours') {
-    return curMin === 0 && curHour % 3 === 0
-  } else if (frequency === 'twice_daily') {
-    // Send at reminder time and reminder time + 12 hours
-    return true // Already checked time match above
-  }
-
-  return false
 }
 
 /**

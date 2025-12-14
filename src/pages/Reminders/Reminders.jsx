@@ -299,6 +299,7 @@ const ReminderForm = ({ reminder, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     reminder_type: reminder?.reminder_type || 'Medication',
     message: reminder?.message || '',
+    frequency: reminder?.frequency || 'one-off',
     time: reminder?.time || '08:00',
     days_of_week: reminder?.days_of_week || [],
     is_active: reminder?.is_active !== undefined ? reminder.is_active : true,
@@ -393,15 +394,51 @@ const ReminderForm = ({ reminder, onSave, onCancel }) => {
           </div>
 
           <div className="form-group">
-            <label>Time</label>
-            <input
-              type="time"
-              className="form-input"
-              value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              required
-            />
+            <label>Frequency Type</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+              <span style={{
+                fontWeight: formData.frequency === 'one-off' ? '600' : '400',
+                color: formData.frequency === 'one-off' ? 'var(--teal)' : '#6b7280'
+              }}>
+                One-off
+              </span>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={formData.frequency === 'hourly'}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    frequency: e.target.checked ? 'hourly' : 'one-off'
+                  })}
+                />
+                <span className="slider"></span>
+              </label>
+              <span style={{
+                fontWeight: formData.frequency === 'hourly' ? '600' : '400',
+                color: formData.frequency === 'hourly' ? 'var(--teal)' : '#6b7280'
+              }}>
+                Hourly
+              </span>
+            </div>
+            <small className="form-hint" style={{ display: 'block', marginTop: '8px' }}>
+              {formData.frequency === 'hourly'
+                ? 'Will send every hour based on your Communication Settings (start/end time)'
+                : 'Will send once at the specific time you set below'}
+            </small>
           </div>
+
+          {formData.frequency === 'one-off' && (
+            <div className="form-group">
+              <label>Time</label>
+              <input
+                type="time"
+                className="form-input"
+                value={formData.time}
+                onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                required
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label>Days of Week</label>
