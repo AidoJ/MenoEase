@@ -257,36 +257,8 @@ function checkReminderDue(reminder, currentTime, currentDayOfWeek, prefs) {
  * Send email reminder via EmailJS
  */
 async function sendEmailReminder(toEmail, userName, message, reminderType) {
-  const emailjs = require('@emailjs/nodejs')
-  
-  const serviceId = process.env.EMAILJS_SERVICE_ID
-  // Template ID should be set in Netlify env vars (e.g., "Meno_Reminder")
-  const templateId = process.env.EMAILJS_TEMPLATE_REMINDER || 'Meno_Reminder'
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY
-
-  if (!serviceId || !templateId || !publicKey) {
-    throw new Error('EmailJS not configured')
-  }
-
-  const now = new Date()
-  const date = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-
-  // Variables match the {{variable}} names in the HTML template
-  await emailjs.send(
-    serviceId,
-    templateId,
-    {
-      to_email: toEmail,
-      to_name: userName,
-      user_name: userName,
-      reminder_type: reminderType,
-      reminder_message: message,
-      date,
-      time,
-    },
-    { publicKey }
-  )
+  const { sendReminderEmail } = require('./lib/emailService')
+  return sendReminderEmail(toEmail, userName, message, reminderType)
 }
 
 /**

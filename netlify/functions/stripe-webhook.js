@@ -10,15 +10,17 @@
  * - SUPABASE_SERVICE_ROLE_KEY
  * - EMAILJS_SERVICE_ID
  * - EMAILJS_PUBLIC_KEY
- * - EMAILJS_TEMPLATE_WELCOME
- * - EMAILJS_TEMPLATE_UPGRADE
- * - EMAILJS_TEMPLATE_DOWNGRADE
- * - EMAILJS_TEMPLATE_CANCELLED
  */
 
 // Don't initialize at module level - do it in handler
 const { createClient } = require('@supabase/supabase-js')
 const stripeLib = require('stripe')
+const {
+  sendWelcomeEmail,
+  sendUpgradeEmail,
+  sendDowngradeEmail,
+  sendCancellationEmail
+} = require('./lib/emailService')
 
 // Initialize Supabase client (will be re-initialized in handler if env vars change)
 let supabase
@@ -337,21 +339,19 @@ async function handleSubscriptionCreated(subscription) {
   })
 
   // Send welcome or upgrade email
-  const templateId = oldTier === 'free'
-    ? process.env.EMAILJS_TEMPLATE_WELCOME
-    : process.env.EMAILJS_TEMPLATE_UPGRADE
+  const userName = profile.first_name || 'User'
+  const tierName = tier.charAt(0).toUpperCase() + tier.slice(1)
 
-  if (templateId) {
-    await sendEmail(
-      profile.email,
-      profile.first_name || 'User',
-      templateId,
-      {
-        tier_name: tier.charAt(0).toUpperCase() + tier.slice(1),
-        old_tier: oldTier,
-        new_tier: tier
-      }
-    )
+  try {
+    if (oldTier === 'free') {
+      await sendWelcomeEmail(profile.email, userName)
+    } else {
+      await sendUpgradeEmail(profile.email, userName, tierName)
+    }
+    console.log(`${oldTier === 'free' ? 'Welcome' : 'Upgrade'} email sent to ${profile.email}`)
+  } catch (emailError) {
+    console.error('Error sending email:', emailError)
+    // Don't fail the webhook if email fails
   }
 
   console.log(`Subscription created for user ${profile.user_id}: ${tier}`)
@@ -405,15 +405,16 @@ async function handleSubscriptionUpdated(subscription) {
 
   // Determine event type
   let eventType = 'subscription_updated'
-  let templateId = null
+  let isUpgrade = false
+  let isDowngrade = false
 
   if (oldTier !== tier) {
     if (tierRank(tier) > tierRank(oldTier)) {
       eventType = 'tier_upgraded'
-      templateId = process.env.EMAILJS_TEMPLATE_UPGRADE
+      isUpgrade = true
     } else if (tierRank(tier) < tierRank(oldTier)) {
       eventType = 'tier_downgraded'
-      templateId = process.env.EMAILJS_TEMPLATE_DOWNGRADE
+      isDowngrade = true
     }
   }
 
@@ -434,17 +435,21 @@ async function handleSubscriptionUpdated(subscription) {
   })
 
   // Send email if tier changed
-  if (templateId && oldTier !== tier) {
-    await sendEmail(
-      profile.email,
-      profile.first_name || 'User',
-      templateId,
-      {
-        tier_name: tier.charAt(0).toUpperCase() + tier.slice(1),
-        old_tier: oldTier,
-        new_tier: tier
+  if (oldTier !== tier) {
+    const userName = profile.first_name || 'User'
+    const tierName = tier.charAt(0).toUpperCase() + tier.slice(1)
+
+    try {
+      if (isUpgrade) {
+        await sendUpgradeEmail(profile.email, userName, tierName)
+      } else if (isDowngrade) {
+        await sendDowngradeEmail(profile.email, userName, tierName)
       }
-    )
+      console.log(`${isUpgrade ? 'Upgrade' : 'Downgrade'} email sent to ${profile.email}`)
+    } catch (emailError) {
+      console.error('Error sending email:', emailError)
+      // Don't fail the webhook if email fails
+    }
   }
 
   console.log(`Subscription updated for user ${profile.user_id}: ${oldTier} -> ${tier}`)
@@ -499,16 +504,19 @@ async function handleSubscriptionDeleted(subscription) {
   })
 
   // Send cancellation email
-  const templateId = process.env.EMAILJS_TEMPLATE_CANCELLED
-  if (templateId) {
-    await sendEmail(
-      profile.email,
-      profile.first_name || 'User',
-      templateId,
-      {
-        tier_name: oldTier.charAt(0).toUpperCase() + oldTier.slice(1)
-      }
-    )
+  const userName = profile.first_name || 'User'
+  const endDate = new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+
+  try {
+    await sendCancellationEmail(profile.email, userName, endDate)
+    console.log(`Cancellation email sent to ${profile.email}`)
+  } catch (emailError) {
+    console.error('Error sending cancellation email:', emailError)
+    // Don't fail the webhook if email fails
   }
 
   console.log(`Subscription cancelled for user ${profile.user_id}`)
@@ -667,35 +675,4 @@ async function logSubscriptionEvent(event) {
   }
 }
 
-/**
- * Helper: Send email via EmailJS
- */
-async function sendEmail(toEmail, userName, templateId, templateParams) {
-  try {
-    const emailjs = require('@emailjs/nodejs')
-
-    const serviceId = process.env.EMAILJS_SERVICE_ID
-    const publicKey = process.env.EMAILJS_PUBLIC_KEY
-
-    if (!serviceId || !publicKey || !templateId) {
-      console.log('EmailJS not configured, skipping email')
-      return
-    }
-
-    await emailjs.send(
-      serviceId,
-      templateId,
-      {
-        to_email: toEmail,
-        to_name: userName,
-        user_name: userName,
-        ...templateParams
-      },
-      { publicKey }
-    )
-
-    console.log(`Email sent to ${toEmail} using template ${templateId}`)
-  } catch (error) {
-    console.error('Error sending email:', error)
-  }
-}
+// Email sending is now handled by the centralized emailService module

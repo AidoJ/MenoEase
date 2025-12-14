@@ -1,10 +1,11 @@
 /**
  * Netlify Function: Send Email via EmailJS
- * 
+ *
  * Environment Variables Required:
  * - EMAILJS_SERVICE_ID
- * - EMAILJS_TEMPLATE_ID (or use template_id parameter)
  * - EMAILJS_PUBLIC_KEY
+ *
+ * Template ID should be passed in the request body as 'template_id'
  */
 
 const emailjs = require('@emailjs/nodejs')
