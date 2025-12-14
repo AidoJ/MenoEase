@@ -45,7 +45,7 @@ exports.handler = async (event, context) => {
     // Fetch all active reminders
     const { data: reminders, error: remindersError } = await supabase
       .from('reminders')
-      .select('*, user_profiles!inner(communication_preferences, phone, email, first_name, timezone)')
+      .select('*')
       .eq('is_active', true)
 
     if (remindersError) {
@@ -69,7 +69,18 @@ exports.handler = async (event, context) => {
     // Process each reminder
     for (const reminder of reminders) {
       try {
-        const profile = reminder.user_profiles
+        // Fetch user profile separately
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('communication_preferences, phone, email, first_name, timezone')
+          .eq('user_id', reminder.user_id)
+          .single()
+
+        if (profileError || !profile) {
+          console.error(`Could not find profile for user ${reminder.user_id}`)
+          continue
+        }
+
         const prefs = profile.communication_preferences || {}
 
         // Check if reminders are enabled
@@ -105,15 +116,16 @@ exports.handler = async (event, context) => {
         }
 
         // Prepare reminder message
-        const reminderMessage = reminder.message || `Reminder: ${reminder.reminder_type}`
+        const reminderType = reminder.type || reminder.reminder_type || 'Reminder'
+        const reminderMessage = reminder.message || `Reminder: ${reminderType}`
         const userName = profile.first_name || 'User'
 
         // Send based on user preferences
-        const method = prefs.reminders.method || 'email'
+        const method = prefs.reminders?.method || 'email'
         let sent = false
 
         if (method === 'email' || method === 'both') {
-          await sendEmailReminder(profile.email, userName, reminderMessage, reminder.reminder_type)
+          await sendEmailReminder(profile.email, userName, reminderMessage, reminderType)
           sent = true
         }
 
