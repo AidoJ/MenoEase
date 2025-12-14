@@ -10,9 +10,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# Note: Scheduled functions should be configured in Netlify UI
-# Go to: Site settings → Functions → Scheduled functions
-# Or use Netlify's background functions feature
+# Scheduled function configuration
+# Runs every 5 minutes to check for due reminders
+[functions."process-reminders"]
+  schedule = "*/5 * * * *"
 
 [[headers]]
   for = "/*"
