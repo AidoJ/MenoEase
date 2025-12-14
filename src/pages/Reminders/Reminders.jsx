@@ -337,15 +337,25 @@ const ReminderForm = ({ reminder, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.message) {
-      // Auto-generate message for non-custom types
-      if (formData.reminder_type === 'Custom') {
+
+    // Prepare data to save
+    const dataToSubmit = { ...formData }
+
+    // Auto-generate message if empty
+    if (!dataToSubmit.message) {
+      if (dataToSubmit.reminder_type === 'Custom') {
         alert('Please enter a message for custom reminders')
         return
       }
-      formData.message = `Time to ${formData.reminder_type.toLowerCase()}!`
+      dataToSubmit.message = `Time to ${dataToSubmit.reminder_type.toLowerCase()}!`
     }
-    onSave(formData)
+
+    // For hourly reminders, set a default time (required by DB but not used)
+    if (dataToSubmit.frequency === 'hourly') {
+      dataToSubmit.time = '00:00'
+    }
+
+    onSave(dataToSubmit)
   }
 
   return (
