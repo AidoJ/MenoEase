@@ -109,28 +109,38 @@ const Reminders = () => {
 
   const handleSaveReminder = async (reminderData) => {
     try {
+      console.log('Saving reminder data:', reminderData)
+
       // Ensure title field is set (required by schema)
       const dataToSave = {
         ...reminderData,
         title: reminderData.reminder_type, // Use reminder_type as title
       }
 
+      console.log('Data to save:', dataToSave)
+
       if (editingReminder) {
-        const { error } = await supabase
+        console.log('Updating reminder:', editingReminder.id)
+        const { data, error } = await supabase
           .from('reminders')
           .update(dataToSave)
           .eq('id', editingReminder.id)
+          .select()
 
+        console.log('Update result:', { data, error })
         if (error) throw error
         setSuccess('Reminder updated successfully')
       } else {
-        const { error } = await supabase
+        console.log('Creating new reminder')
+        const { data, error } = await supabase
           .from('reminders')
           .insert([{
             ...dataToSave,
             user_id: user.id,
           }])
+          .select()
 
+        console.log('Insert result:', { data, error })
         if (error) throw error
         setSuccess('Reminder created successfully')
       }
@@ -141,6 +151,7 @@ const Reminders = () => {
     } catch (err) {
       console.error('Error saving reminder:', err)
       setError(err.message || 'Failed to save reminder')
+      setTimeout(() => setError(''), 5000)
     }
   }
 

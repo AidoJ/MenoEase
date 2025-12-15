@@ -64,6 +64,36 @@ const UserManagement = () => {
     }
   }
 
+  const handleResetPassword = async (userId, userEmail) => {
+    const newPassword = prompt(`Enter new password for ${userEmail}:`)
+    if (!newPassword) return
+
+    if (newPassword.length < 6) {
+      alert('Password must be at least 6 characters')
+      return
+    }
+
+    try {
+      // Call Netlify function to reset password
+      const response = await fetch('/.netlify/functions/admin-reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, newPassword }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset password')
+      }
+
+      alert('Password reset successfully')
+    } catch (error) {
+      console.error('Error resetting password:', error)
+      alert(error.message || 'Failed to reset password')
+    }
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch =
       user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -193,12 +223,21 @@ const UserManagement = () => {
                   </td>
                   <td>{new Date(user.created_at).toLocaleDateString()}</td>
                   <td>
-                    <button
-                      className="btn btn-sm btn-primary"
-                      onClick={() => setEditingUser(user.user_id === editingUser ? null : user.user_id)}
-                    >
-                      {editingUser === user.user_id ? 'Cancel' : 'Edit'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => setEditingUser(user.user_id === editingUser ? null : user.user_id)}
+                      >
+                        {editingUser === user.user_id ? 'Cancel' : 'Edit'}
+                      </button>
+                      <button
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => handleResetPassword(user.user_id, user.email)}
+                        title="Reset Password"
+                      >
+                        🔑
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -23,6 +23,7 @@ const TEMPLATES = {
 async function sendEmail(templateId, params) {
   const serviceId = process.env.EMAILJS_SERVICE_ID
   const publicKey = process.env.EMAILJS_PUBLIC_KEY
+  const privateKey = process.env.EMAILJS_PRIVATE_KEY
 
   if (!serviceId || !publicKey) {
     throw new Error('EmailJS not configured. Missing EMAILJS_SERVICE_ID or EMAILJS_PUBLIC_KEY')
@@ -33,7 +34,10 @@ async function sendEmail(templateId, params) {
       serviceId,
       templateId,
       params,
-      { publicKey }
+      {
+        publicKey,
+        privateKey, // Required for server-side calls
+      }
     )
     console.log(`Email sent successfully: ${templateId}`, response)
     return response
