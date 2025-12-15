@@ -12,7 +12,7 @@ const TEMPLATES = {
   UPGRADE: 'Meno_Upgrade',
   DOWNGRADE: 'Meno_Downgrade',
   CANCELLED: 'Meno_Cancelled',
-  REPORT_DAILY: 'Meno_ReportDaily',
+  REPORT_DAILY: 'test_report', // Temporary - testing if fresh template works
   REPORT_WEEKLY: 'Meno_ReportWeekly',
   REPORT_MONTHLY: 'Meno_ReportMonthly',
 }
