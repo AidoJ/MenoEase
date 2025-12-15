@@ -24,10 +24,20 @@
 const { createClient } = require('@supabase/supabase-js')
 
 exports.handler = async (event, context) => {
+  console.log('========== PROCESS REMINDERS FUNCTION STARTED ==========')
+
   try {
     // Initialize Supabase with service role key (bypasses RLS)
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasEmailJsService: !!process.env.EMAILJS_SERVICE_ID,
+      hasEmailJsPublic: !!process.env.EMAILJS_PUBLIC_KEY,
+      hasEmailJsPrivate: !!process.env.EMAILJS_PRIVATE_KEY,
+    })
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Missing Supabase environment variables')
@@ -42,6 +52,14 @@ exports.handler = async (event, context) => {
     const currentTime = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
     const currentDayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
 
+    console.log('Current time (UTC):', {
+      timestamp: now.toISOString(),
+      time: currentTime,
+      hour: currentHour,
+      minute: currentMinute,
+      dayOfWeek: currentDayOfWeek,
+    })
+
     // Fetch all active reminders
     const { data: reminders, error: remindersError } = await supabase
       .from('reminders')
@@ -49,10 +67,14 @@ exports.handler = async (event, context) => {
       .eq('is_active', true)
 
     if (remindersError) {
+      console.error('Error fetching reminders:', remindersError)
       throw remindersError
     }
 
+    console.log(`Found ${reminders?.length || 0} active reminders`)
+
     if (!reminders || reminders.length === 0) {
+      console.log('No active reminders to process, exiting')
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -63,12 +85,22 @@ exports.handler = async (event, context) => {
       }
     }
 
+    console.log('Reminders to check:', reminders.map(r => ({
+      id: r.id,
+      type: r.reminder_type,
+      frequency: r.frequency,
+      time: r.time,
+      days: r.days_of_week,
+    })))
+
     let processed = 0
     let errors = []
 
     // Process each reminder
     for (const reminder of reminders) {
       try {
+        console.log(`\n--- Processing reminder ${reminder.id} ---`)
+
         // Fetch user profile separately
         const { data: profile, error: profileError } = await supabase
           .from('user_profiles')
@@ -77,16 +109,30 @@ exports.handler = async (event, context) => {
           .single()
 
         if (profileError || !profile) {
-          console.error(`Could not find profile for user ${reminder.user_id}`)
+          console.error(`Could not find profile for user ${reminder.user_id}`, profileError)
           continue
         }
+
+        console.log('User profile found:', {
+          email: profile.email,
+          timezone: profile.timezone,
+          hasPrefs: !!profile.communication_preferences,
+        })
 
         const prefs = profile.communication_preferences || {}
 
         // Check if reminders are enabled
         if (!prefs.reminders?.enabled) {
+          console.log('Reminders not enabled for this user, skipping')
           continue
         }
+
+        console.log('Communication preferences:', {
+          enabled: prefs.reminders?.enabled,
+          method: prefs.reminders?.method,
+          startTime: prefs.reminders?.start_time,
+          endTime: prefs.reminders?.end_time,
+        })
 
         // Get user's local time based on their timezone
         const userTimezone = profile.timezone || 'UTC'
@@ -94,10 +140,20 @@ exports.handler = async (event, context) => {
         const userDayOfWeek = userLocalTime.getDay()
         const userTimeString = `${String(userLocalTime.getHours()).padStart(2, '0')}:${String(userLocalTime.getMinutes()).padStart(2, '0')}`
 
+        console.log('User local time:', {
+          timezone: userTimezone,
+          time: userTimeString,
+          dayOfWeek: userDayOfWeek,
+          fullTimestamp: userLocalTime.toISOString(),
+        })
+
         // Check if reminder is due based on frequency and time
         const isDue = checkReminderDue(reminder, userTimeString, userDayOfWeek, prefs.reminders)
 
+        console.log('Is reminder due?', isDue)
+
         if (!isDue) {
+          console.log('Reminder not due yet, skipping')
           continue
         }
 
@@ -111,7 +167,13 @@ exports.handler = async (event, context) => {
           .eq('status', 'sent')
           .limit(1)
 
+        console.log('Duplicate check:', {
+          userLocalDate,
+          existingLog: existingLog?.length || 0,
+        })
+
         if (existingLog && existingLog.length > 0) {
+          console.log('Already sent today, skipping')
           continue // Already sent today
         }
 
@@ -120,23 +182,38 @@ exports.handler = async (event, context) => {
         const reminderMessage = reminder.message || `Reminder: ${reminderType}`
         const userName = profile.first_name || 'User'
 
+        console.log('Preparing to send reminder:', {
+          type: reminderType,
+          message: reminderMessage,
+          userName,
+        })
+
         // Send based on user preferences
         const method = prefs.reminders?.method || 'email'
         let sent = false
 
+        console.log('Sending method:', method)
+
         if (method === 'email' || method === 'both') {
+          console.log('Sending email to:', profile.email)
           await sendEmailReminder(profile.email, userName, reminderMessage, reminderType)
           sent = true
+          console.log('Email sent successfully')
         }
 
         if (method === 'sms' || method === 'both') {
           if (profile.phone) {
+            console.log('Sending SMS to:', profile.phone)
             await sendSMSReminder(profile.phone, reminderMessage)
             sent = true
+            console.log('SMS sent successfully')
+          } else {
+            console.log('SMS requested but no phone number available')
           }
         }
 
         if (sent) {
+          console.log('Logging reminder send to database')
           // Log the reminder with user's local time
           const userLocalDate = userLocalTime.toISOString().split('T')[0]
           await supabase
@@ -151,12 +228,19 @@ exports.handler = async (event, context) => {
             })
 
           processed++
+          console.log(`✓ Reminder ${reminder.id} processed successfully`)
         }
       } catch (error) {
         console.error(`Error processing reminder ${reminder.id}:`, error)
         errors.push({ reminder_id: reminder.id, error: error.message })
       }
     }
+
+    console.log('\n========== SUMMARY ==========')
+    console.log(`Total reminders checked: ${reminders.length}`)
+    console.log(`Successfully processed: ${processed}`)
+    console.log(`Errors: ${errors.length}`)
+    console.log('========== PROCESS REMINDERS FUNCTION ENDED ==========\n')
 
     return {
       statusCode: 200,
@@ -167,7 +251,8 @@ exports.handler = async (event, context) => {
       }),
     }
   } catch (error) {
-    console.error('Error processing reminders:', error)
+    console.error('FATAL ERROR processing reminders:', error)
+    console.log('========== PROCESS REMINDERS FUNCTION ENDED WITH ERROR ==========\n')
     return {
       statusCode: 500,
       body: JSON.stringify({
