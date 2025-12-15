@@ -25,19 +25,42 @@ async function sendEmail(templateId, params) {
   const publicKey = process.env.EMAILJS_PUBLIC_KEY
   const privateKey = process.env.EMAILJS_PRIVATE_KEY
 
+  console.log('EmailJS configuration check:', {
+    hasServiceId: !!serviceId,
+    hasPublicKey: !!publicKey,
+    hasPrivateKey: !!privateKey,
+    privateKeyLength: privateKey ? privateKey.length : 0,
+  })
+
   if (!serviceId || !publicKey) {
     throw new Error('EmailJS not configured. Missing EMAILJS_SERVICE_ID or EMAILJS_PUBLIC_KEY')
   }
 
+  if (!privateKey) {
+    console.warn('WARNING: EMAILJS_PRIVATE_KEY is not set. Server-side calls may fail.')
+  }
+
   try {
+    const options = {
+      publicKey: publicKey,
+    }
+
+    // Only add private key if it exists
+    if (privateKey) {
+      options.privateKey = privateKey
+    }
+
+    console.log('Sending email with options:', {
+      templateId,
+      hasPrivateKey: !!options.privateKey,
+      serviceId: serviceId.substring(0, 8) + '...',
+    })
+
     const response = await emailjs.send(
       serviceId,
       templateId,
       params,
-      {
-        publicKey,
-        privateKey, // Required for server-side calls
-      }
+      options
     )
     console.log(`Email sent successfully: ${templateId}`, response)
     return response
