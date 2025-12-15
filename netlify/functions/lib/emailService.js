@@ -52,9 +52,14 @@ async function sendEmail(templateId, params) {
 
     console.log('Sending email with options:', {
       templateId,
+      templateIdType: typeof templateId,
+      templateIdLength: templateId?.length,
       hasPrivateKey: !!options.privateKey,
       serviceId: serviceId.substring(0, 8) + '...',
+      paramKeys: Object.keys(params),
     })
+
+    console.log('EXACT TEMPLATE ID:', JSON.stringify(templateId))
 
     const response = await emailjs.send(
       serviceId,
