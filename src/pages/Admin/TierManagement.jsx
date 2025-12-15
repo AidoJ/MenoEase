@@ -7,6 +7,82 @@ const TierManagement = () => {
   const [editingTier, setEditingTier] = useState(null)
   const [formData, setFormData] = useState({})
 
+  const formatFeatures = (features) => {
+    if (!features) return []
+
+    const formatted = []
+
+    // Tracking
+    if (features.tracking) {
+      formatted.push('Basic symptom and mood tracking')
+    }
+
+    // History
+    if (features.history_days === null) {
+      formatted.push('Unlimited history')
+    } else if (features.history_days > 0) {
+      formatted.push(`${features.history_days} days of history`)
+    }
+
+    // Insights
+    if (features.insights) {
+      formatted.push('Basic insights and trends')
+    }
+    if (features.advanced_insights) {
+      formatted.push('Advanced insights and analytics')
+    }
+
+    // Reminders
+    if (features.reminders?.enabled) {
+      const methods = features.reminders.methods?.join(', ') || 'none'
+      const maxPerDay = features.reminders.max_per_day || 0
+      formatted.push(`Reminders via ${methods} (up to ${maxPerDay}/day)`)
+    } else {
+      formatted.push('No reminders')
+    }
+
+    // Reports
+    if (features.reports?.enabled) {
+      const methods = features.reports.methods?.join(', ') || 'none'
+      const frequencies = features.reports.frequencies?.join(', ') || 'none'
+      formatted.push(`Reports via ${methods} (${frequencies})`)
+    } else {
+      formatted.push('No automated reports')
+    }
+
+    // PDF Export
+    if (features.export_pdf) {
+      formatted.push('PDF export')
+    }
+
+    // Support
+    const supportMap = {
+      'community': 'Community support',
+      'email': 'Email support',
+      'priority_email': 'Priority email support',
+      'phone': 'Phone support'
+    }
+    if (features.support) {
+      formatted.push(supportMap[features.support] || features.support)
+    }
+    if (features.priority_support) {
+      formatted.push('Priority support')
+    }
+    if (features.dedicated_support) {
+      formatted.push('Dedicated support manager')
+    }
+
+    // Special features
+    if (features.api_access) {
+      formatted.push('API access')
+    }
+    if (features.white_label) {
+      formatted.push('White label branding')
+    }
+
+    return formatted
+  }
+
   useEffect(() => {
     loadTiers()
   }, [])
@@ -224,16 +300,18 @@ const TierManagement = () => {
                   <div style={{ fontSize: '0.875rem', fontWeight: 500, marginBottom: '0.75rem' }}>
                     Features:
                   </div>
-                  <div style={{
-                    background: '#f9fafb',
-                    padding: '1rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8125rem',
+                  <ul style={{
+                    margin: 0,
+                    paddingLeft: '1.25rem',
+                    display: 'grid',
+                    gap: '0.5rem',
+                    fontSize: '0.875rem',
+                    color: '#374151'
                   }}>
-                    <pre style={{ margin: 0, overflow: 'auto' }}>
-                      {JSON.stringify(tier.features, null, 2)}
-                    </pre>
-                  </div>
+                    {formatFeatures(tier.features).map((feature, index) => (
+                      <li key={index}>{feature}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             )}
