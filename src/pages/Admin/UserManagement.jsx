@@ -7,6 +7,14 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTier, setFilterTier] = useState('all')
   const [editingUser, setEditingUser] = useState(null)
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    role: '',
+    subscription_tier: '',
+    subscription_status: ''
+  })
 
   useEffect(() => {
     loadUsers()
@@ -36,38 +44,52 @@ const UserManagement = () => {
     }
   }
 
-  const handleUpdateTier = async (userId, newTier) => {
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ subscription_tier: newTier })
-        .eq('user_id', userId)
-
-      if (error) throw error
-
-      alert('User tier updated successfully')
-      loadUsers()
-      setEditingUser(null)
-    } catch (error) {
-      console.error('Error updating tier:', error)
-      alert('Failed to update user tier')
-    }
+  const handleEditUser = (user) => {
+    setEditingUser(user.user_id)
+    setEditForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email || '',
+      role: user.role || 'user',
+      subscription_tier: user.subscription_tier || 'free',
+      subscription_status: user.subscription_status || 'active'
+    })
   }
 
-  const handleUpdateStatus = async (userId, newStatus) => {
+  const handleCancelEdit = () => {
+    setEditingUser(null)
+    setEditForm({
+      first_name: '',
+      last_name: '',
+      email: '',
+      role: '',
+      subscription_tier: '',
+      subscription_status: ''
+    })
+  }
+
+  const handleSaveUser = async (userId) => {
     try {
       const { error } = await supabase
         .from('user_profiles')
-        .update({ subscription_status: newStatus })
+        .update({
+          first_name: editForm.first_name.trim(),
+          last_name: editForm.last_name.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+          subscription_tier: editForm.subscription_tier,
+          subscription_status: editForm.subscription_status
+        })
         .eq('user_id', userId)
 
       if (error) throw error
 
-      alert('User status updated successfully')
+      alert('User updated successfully')
       loadUsers()
+      handleCancelEdit()
     } catch (error) {
-      console.error('Error updating status:', error)
-      alert('Failed to update user status')
+      console.error('Error updating user:', error)
+      alert('Failed to update user: ' + error.message)
     }
   }
 
@@ -181,21 +203,70 @@ const UserManagement = () => {
               {filteredUsers.map((user) => (
                 <tr key={user.user_id}>
                   <td>
-                    <div>
-                      <div style={{ fontWeight: 500 }}>
-                        {user.first_name} {user.last_name}
+                    {editingUser === user.user_id ? (
+                      <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <input
+                          type="text"
+                          value={editForm.first_name}
+                          onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                          placeholder="First name"
+                          style={{
+                            width: '80px',
+                            padding: '0.25rem 0.5rem',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={editForm.last_name}
+                          onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                          placeholder="Last name"
+                          style={{
+                            width: '80px',
+                            padding: '0.25rem 0.5rem',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                          }}
+                        />
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {user.role === 'admin' && '👑 Admin'}
+                    ) : (
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {user.first_name} {user.last_name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                          {user.role === 'admin' && '👑 Admin'}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
-                  <td>{user.email}</td>
+                  <td>
+                    {editingUser === user.user_id ? (
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        placeholder="Email"
+                        style={{
+                          width: '180px',
+                          padding: '0.25rem 0.5rem',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                        }}
+                      />
+                    ) : (
+                      user.email
+                    )}
+                  </td>
                   <td>
                     {editingUser === user.user_id ? (
                       <select
-                        defaultValue={user.subscription_tier}
-                        onBlur={(e) => handleUpdateTier(user.user_id, e.target.value)}
+                        value={editForm.subscription_tier}
+                        onChange={(e) => setEditForm({ ...editForm, subscription_tier: e.target.value })}
                         style={{
                           padding: '0.25rem 0.5rem',
                           border: '1px solid #e5e7eb',
@@ -209,19 +280,32 @@ const UserManagement = () => {
                         <option value="professional">Professional</option>
                       </select>
                     ) : (
-                      <span
-                        className={`badge ${user.subscription_tier}`}
-                        onClick={() => setEditingUser(user.user_id)}
-                        style={{ cursor: 'pointer' }}
-                      >
+                      <span className={`badge ${user.subscription_tier}`}>
                         {user.subscription_tier}
                       </span>
                     )}
                   </td>
                   <td>
-                    <span className={`badge ${user.subscription_status}`}>
-                      {user.subscription_status}
-                    </span>
+                    {editingUser === user.user_id ? (
+                      <select
+                        value={editForm.subscription_status}
+                        onChange={(e) => setEditForm({ ...editForm, subscription_status: e.target.value })}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        <option value="active">Active</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="expired">Expired</option>
+                      </select>
+                    ) : (
+                      <span className={`badge ${user.subscription_status}`}>
+                        {user.subscription_status}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span style={{ fontSize: '0.75rem', color: '#6b7280', fontFamily: 'monospace' }}>
@@ -230,21 +314,63 @@ const UserManagement = () => {
                   </td>
                   <td>{new Date(user.created_at).toLocaleDateString()}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => setEditingUser(user.user_id === editingUser ? null : user.user_id)}
-                      >
-                        {editingUser === user.user_id ? 'Cancel' : 'Edit'}
-                      </button>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => handleResetPassword(user.user_id, user.email)}
-                        title="Reset Password"
-                      >
-                        🔑
-                      </button>
-                    </div>
+                    {editingUser === user.user_id ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <select
+                          value={editForm.role}
+                          onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            width: '100%',
+                            marginBottom: '0.25rem',
+                          }}
+                        >
+                          <option value="user">User</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleSaveUser(user.user_id)}
+                          style={{ flex: 1, minWidth: '60px' }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={handleCancelEdit}
+                          style={{ flex: 1, minWidth: '60px' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => handleResetPassword(user.user_id, user.email)}
+                          title="Reset Password"
+                          style={{ width: '100%' }}
+                        >
+                          🔑 Reset Password
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => handleResetPassword(user.user_id, user.email)}
+                          title="Reset Password"
+                        >
+                          🔑
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

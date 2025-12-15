@@ -24,6 +24,7 @@ import Signup from './pages/Auth/Signup'
 import ProtectedRoute from './components/Auth/ProtectedRoute'
 import AdminRoute from './components/Auth/AdminRoute'
 import AdminLayout from './components/Layout/AdminLayout'
+import AdminLogin from './pages/Admin/AdminLogin'
 import AdminDashboard from './pages/Admin/AdminDashboard'
 import UserManagement from './pages/Admin/UserManagement'
 import SubscriptionManagement from './pages/Admin/SubscriptionManagement'
@@ -38,6 +39,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
             {/* Admin Routes */}
             <Route
