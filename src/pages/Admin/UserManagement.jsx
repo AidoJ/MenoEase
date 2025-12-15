@@ -14,16 +14,23 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     setLoading(true)
+    console.log('UserManagement: Loading users...')
     try {
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .order('created_at', { ascending: false })
 
+      console.log('UserManagement: Query result:', {
+        userCount: data?.length,
+        error,
+        users: data?.map(u => ({ email: u.email, role: u.role }))
+      })
+
       if (error) throw error
       setUsers(data || [])
     } catch (error) {
-      console.error('Error loading users:', error)
+      console.error('UserManagement: Error loading users:', error)
     } finally {
       setLoading(false)
     }
