@@ -11,25 +11,32 @@ const AdminRoute = ({ children }) => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       if (!user) {
+        console.log('AdminRoute: No user logged in')
         setLoading(false)
         return
       }
 
+      console.log('AdminRoute: Checking admin status for user:', user.id)
+
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('role')
+          .select('role, email')
           .eq('user_id', user.id)
           .single()
 
+        console.log('AdminRoute: Query result:', { data, error })
+
         if (error) {
-          console.error('Error checking admin status:', error)
+          console.error('AdminRoute: Error checking admin status:', error)
           setIsAdmin(false)
         } else {
-          setIsAdmin(data?.role === 'admin')
+          const adminStatus = data?.role === 'admin'
+          console.log('AdminRoute: User role:', data?.role, '| Is admin?', adminStatus)
+          setIsAdmin(adminStatus)
         }
       } catch (err) {
-        console.error('Error:', err)
+        console.error('AdminRoute: Exception:', err)
         setIsAdmin(false)
       } finally {
         setLoading(false)
