@@ -95,8 +95,22 @@ exports.handler = async (event, context) => {
           method: prefs.reports.method,
         })
 
-        // Check if report is due
-        const isDue = checkReportDue(prefs.reports, currentTime, currentDayOfWeek, currentDayOfMonth)
+        // Get user's local time based on their timezone
+        const userTimezone = profile.timezone || 'UTC'
+        const userLocalTime = getUserLocalTime(now, userTimezone)
+        const userDayOfWeek = userLocalTime.getDay()
+        const userDayOfMonth = userLocalTime.getDate()
+        const userTimeString = `${String(userLocalTime.getHours()).padStart(2, '0')}:${String(userLocalTime.getMinutes()).padStart(2, '0')}`
+
+        console.log('User local time:', {
+          timezone: userTimezone,
+          time: userTimeString,
+          dayOfWeek: userDayOfWeek,
+          dayOfMonth: userDayOfMonth,
+        })
+
+        // Check if report is due (using user's local time)
+        const isDue = checkReportDue(prefs.reports, userTimeString, userDayOfWeek, userDayOfMonth)
 
         console.log('Is report due?', isDue)
 
@@ -169,6 +183,44 @@ exports.handler = async (event, context) => {
         message: error.message,
       }),
     }
+  }
+}
+
+/**
+ * Convert UTC time to user's local time based on their timezone
+ */
+function getUserLocalTime(utcDate, timezone) {
+  try {
+    // Use Intl.DateTimeFormat to convert to user's timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    })
+
+    const parts = formatter.formatToParts(utcDate)
+    const dateParts = {}
+
+    parts.forEach(part => {
+      if (part.type !== 'literal') {
+        dateParts[part.type] = part.value
+      }
+    })
+
+    // Create a new Date object in the user's timezone
+    // Note: This creates a Date in UTC but with the values from the user's timezone
+    return new Date(
+      `${dateParts.year}-${dateParts.month}-${dateParts.day}T${dateParts.hour}:${dateParts.minute}:${dateParts.second}Z`
+    )
+  } catch (error) {
+    console.error('Error converting timezone:', error)
+    // Fallback to UTC if timezone conversion fails
+    return utcDate
   }
 }
 
