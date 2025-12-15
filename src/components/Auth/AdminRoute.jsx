@@ -29,6 +29,12 @@ const AdminRoute = ({ children }) => {
 
         if (error) {
           console.error('AdminRoute: Error checking admin status:', error)
+          console.error('AdminRoute: Error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          })
           setIsAdmin(false)
         } else {
           const adminStatus = data?.role === 'admin'
