@@ -18,10 +18,20 @@ const { createClient } = require('@supabase/supabase-js')
 const { format, subDays, startOfWeek, startOfMonth } = require('date-fns')
 
 exports.handler = async (event, context) => {
+  console.log('========== GENERATE REPORTS FUNCTION STARTED ==========')
+
   try {
     // Initialize Supabase
     const supabaseUrl = process.env.SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasEmailJsService: !!process.env.EMAILJS_SERVICE_ID,
+      hasEmailJsPublic: !!process.env.EMAILJS_PUBLIC_KEY,
+      hasEmailJsPrivate: !!process.env.EMAILJS_PRIVATE_KEY,
+    })
 
     if (!supabaseUrl || !supabaseKey) {
       throw new Error('Missing Supabase environment variables')
@@ -34,6 +44,13 @@ exports.handler = async (event, context) => {
     const currentDayOfWeek = now.getDay()
     const currentDayOfMonth = now.getDate()
 
+    console.log('Current time (UTC):', {
+      timestamp: now.toISOString(),
+      time: currentTime,
+      dayOfWeek: currentDayOfWeek,
+      dayOfMonth: currentDayOfMonth,
+    })
+
     // Fetch all users with reports enabled
     const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
@@ -41,10 +58,14 @@ exports.handler = async (event, context) => {
       .not('communication_preferences', 'is', null)
 
     if (profilesError) {
+      console.error('Error fetching user profiles:', profilesError)
       throw profilesError
     }
 
+    console.log(`Found ${profiles?.length || 0} user profiles with communication preferences`)
+
     if (!profiles || profiles.length === 0) {
+      console.log('No users with communication preferences, exiting')
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -67,36 +88,68 @@ exports.handler = async (event, context) => {
           continue
         }
 
+        console.log(`\n--- Processing report for user ${profile.user_id} (${profile.email}) ---`)
+        console.log('Report preferences:', {
+          frequency: prefs.reports.frequency,
+          time: prefs.reports.time,
+          method: prefs.reports.method,
+        })
+
         // Check if report is due
         const isDue = checkReportDue(prefs.reports, currentTime, currentDayOfWeek, currentDayOfMonth)
-        
+
+        console.log('Is report due?', isDue)
+
         if (!isDue) {
+          console.log('Report not due yet, skipping')
           continue
         }
 
+        console.log('Generating report data...')
         // Generate report data
         const reportData = await generateReportData(supabase, profile.user_id, prefs.reports.frequency)
+        console.log('Report data generated:', {
+          period: reportData.period,
+          avgEnergy: reportData.avgEnergy,
+          symptomDays: reportData.symptomDays,
+          mealsLogged: reportData.mealsLogged,
+        })
 
         // Send report
         const method = prefs.reports.method || 'email'
         const userName = profile.first_name || 'User'
 
+        console.log('Sending method:', method)
+
         if (method === 'email' || method === 'both') {
+          console.log('Sending email report to:', profile.email)
           await sendEmailReport(profile.email, userName, prefs.reports.frequency, reportData)
+          console.log('Email report sent successfully')
         }
 
         if (method === 'sms' || method === 'both') {
           if (profile.phone) {
+            console.log('Sending SMS report to:', profile.phone)
             await sendSMSReport(profile.phone, prefs.reports.frequency, reportData)
+            console.log('SMS report sent successfully')
+          } else {
+            console.log('SMS requested but no phone number available')
           }
         }
 
         processed++
+        console.log(`✓ Report for user ${profile.user_id} processed successfully`)
       } catch (error) {
         console.error(`Error processing report for user ${profile.user_id}:`, error)
         errors.push({ user_id: profile.user_id, error: error.message })
       }
     }
+
+    console.log('\n========== SUMMARY ==========')
+    console.log(`Total profiles checked: ${profiles.length}`)
+    console.log(`Reports successfully sent: ${processed}`)
+    console.log(`Errors: ${errors.length}`)
+    console.log('========== GENERATE REPORTS FUNCTION ENDED ==========\n')
 
     return {
       statusCode: 200,
@@ -107,7 +160,8 @@ exports.handler = async (event, context) => {
       }),
     }
   } catch (error) {
-    console.error('Error generating reports:', error)
+    console.error('FATAL ERROR generating reports:', error)
+    console.log('========== GENERATE REPORTS FUNCTION ENDED WITH ERROR ==========\n')
     return {
       statusCode: 500,
       body: JSON.stringify({
@@ -216,46 +270,24 @@ async function generateReportData(supabase, userId, frequency) {
  * Send email report via EmailJS
  */
 async function sendEmailReport(toEmail, userName, frequency, reportData) {
-  const emailjs = require('@emailjs/nodejs')
-  
-  const serviceId = process.env.EMAILJS_SERVICE_ID
-  // Template IDs should be set in Netlify env vars (e.g., "Meno_ReportDaily")
-  const templateMap = {
-    daily: process.env.EMAILJS_TEMPLATE_REPORT_DAILY || 'Meno_ReportDaily',
-    weekly: process.env.EMAILJS_TEMPLATE_REPORT_WEEKLY || 'Meno_ReportWeekly',
-    monthly: process.env.EMAILJS_TEMPLATE_REPORT_MONTHLY || 'Meno_ReportMonthly',
-  }
-  const templateId = templateMap[frequency] || templateMap.weekly
-  const publicKey = process.env.EMAILJS_PUBLIC_KEY
+  const {
+    sendDailyReportEmail,
+    sendWeeklyReportEmail,
+    sendMonthlyReportEmail,
+  } = require('./lib/emailService')
 
-  if (!serviceId || !templateId || !publicKey) {
-    throw new Error('EmailJS not configured')
-  }
+  const currentDate = format(new Date(), 'MMMM d, yyyy')
 
-  // Variables match the {{variable}} names in the HTML templates
-  const templateParams = {
-    to_email: toEmail,
-    to_name: userName,
-    user_name: userName,
-    report_period: reportData.period,
-    report_data: reportData.html,
+  if (frequency === 'daily') {
+    await sendDailyReportEmail(toEmail, userName, currentDate, reportData.html)
+  } else if (frequency === 'weekly') {
+    const insightMessage = reportData.insight || 'Keep up the great tracking!'
+    await sendWeeklyReportEmail(toEmail, userName, reportData.period, reportData.html, insightMessage)
+  } else if (frequency === 'monthly') {
+    const trendsMessage = reportData.trends || 'Your data is building over time.'
+    const recommendationsMessage = reportData.recommendations || 'Continue logging daily for better insights.'
+    await sendMonthlyReportEmail(toEmail, userName, reportData.period, reportData.html, trendsMessage, recommendationsMessage)
   }
-
-  // Add additional variables for weekly/monthly reports
-  if (frequency === 'weekly' && reportData.insight) {
-    templateParams.insight_message = reportData.insight
-  }
-  if (frequency === 'monthly') {
-    if (reportData.trends) templateParams.trends_message = reportData.trends
-    if (reportData.recommendations) templateParams.recommendations_message = reportData.recommendations
-  }
-
-  await emailjs.send(
-    serviceId,
-    templateId,
-    templateParams,
-    { publicKey }
-  )
 }
 
 /**
