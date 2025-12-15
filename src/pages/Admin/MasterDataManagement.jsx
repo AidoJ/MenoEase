@@ -7,10 +7,13 @@ const MasterDataManagement = () => {
   const [loading, setLoading] = useState(false)
   const [newItem, setNewItem] = useState('')
   const [newCategory, setNewCategory] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editName, setEditName] = useState('')
+  const [editCategory, setEditCategory] = useState('')
 
   const tables = {
     symptoms: { table: 'symptoms_master', nameField: 'symptom', hasCategory: true },
-    medications: { table: 'medications_master', nameField: 'name', hasCategory: false },
+    medications: { table: 'medications_master', nameField: 'name', hasCategory: true },
     exercises: { table: 'exercises_master', nameField: 'name', hasCategory: true },
     foods: { table: 'food_items', nameField: 'name', hasCategory: true },
   }
@@ -66,6 +69,51 @@ const MasterDataManagement = () => {
       console.error('Error adding item:', error)
       alert('Failed to add item: ' + error.message)
     }
+  }
+
+  const handleEdit = (item) => {
+    setEditingId(item.id)
+    setEditName(item[config.nameField])
+    setEditCategory(item.category || '')
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) {
+      alert('Name cannot be empty')
+      return
+    }
+
+    try {
+      const config = tables[activeTab]
+      const updateData = {
+        [config.nameField]: editName.trim(),
+      }
+
+      if (config.hasCategory) {
+        updateData.category = editCategory.trim() || null
+      }
+
+      const { error } = await supabase
+        .from(config.table)
+        .update(updateData)
+        .eq('id', editingId)
+
+      if (error) throw error
+
+      setEditingId(null)
+      setEditName('')
+      setEditCategory('')
+      loadData()
+    } catch (error) {
+      console.error('Error updating item:', error)
+      alert('Failed to update item: ' + error.message)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditName('')
+    setEditCategory('')
   }
 
   const handleDelete = async (id) => {
@@ -180,21 +228,86 @@ const MasterDataManagement = () => {
                   {data.map((item) => (
                     <tr key={item.id}>
                       <td>{item.id}</td>
-                      <td>{item[config.nameField]}</td>
-                      {config.hasCategory && <td>{item.category || '-'}</td>}
+                      <td>
+                        {editingId === item.id ? (
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '0.25rem 0.5rem',
+                              border: '1px solid #667eea',
+                              borderRadius: '4px',
+                            }}
+                          />
+                        ) : (
+                          item[config.nameField]
+                        )}
+                      </td>
+                      {config.hasCategory && (
+                        <td>
+                          {editingId === item.id ? (
+                            <input
+                              type="text"
+                              value={editCategory}
+                              onChange={(e) => setEditCategory(e.target.value)}
+                              placeholder="Category"
+                              style={{
+                                width: '100%',
+                                padding: '0.25rem 0.5rem',
+                                border: '1px solid #667eea',
+                                borderRadius: '4px',
+                              }}
+                            />
+                          ) : (
+                            item.category || '-'
+                          )}
+                        </td>
+                      )}
                       <td>
                         {item.created_at
                           ? new Date(item.created_at).toLocaleDateString()
                           : '-'}
                       </td>
                       <td>
-                        <button
-                          className="btn btn-sm"
-                          onClick={() => handleDelete(item.id)}
-                          style={{ background: '#ef4444', color: 'white' }}
-                        >
-                          Delete
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {editingId === item.id ? (
+                            <>
+                              <button
+                                className="btn btn-sm"
+                                onClick={handleSaveEdit}
+                                style={{ background: '#10b981', color: 'white' }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                onClick={handleCancelEdit}
+                                style={{ background: '#6b7280', color: 'white' }}
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-sm"
+                                onClick={() => handleEdit(item)}
+                                style={{ background: '#667eea', color: 'white' }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-sm"
+                                onClick={() => handleDelete(item.id)}
+                                style={{ background: '#ef4444', color: 'white' }}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
