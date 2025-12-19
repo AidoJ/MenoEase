@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import SymptomsTracker from '../SymptomsTracker/SymptomsTracker'
 import MoodWellness from '../MoodWellness/MoodWellness'
+import BowelTracker from '../BowelTracker/BowelTracker'
 import './Track.css'
 
 const Track = () => {
@@ -32,11 +33,19 @@ const Track = () => {
           <span className="tab-icon">💆</span>
           <span className="tab-label">Energy/Mood</span>
         </button>
+        <button
+          className={`track-tab ${activeTab === 'bowel' ? 'active' : ''}`}
+          onClick={() => handleTabChange('bowel')}
+        >
+          <span className="tab-icon">🚽</span>
+          <span className="tab-label">Stool</span>
+        </button>
       </div>
 
       <div className="track-content">
         {activeTab === 'symptoms' && <SymptomsTracker />}
         {activeTab === 'mood' && <MoodWellness />}
+        {activeTab === 'bowel' && <BowelTracker />}
       </div>
     </div>
   )
