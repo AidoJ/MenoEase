@@ -185,6 +185,7 @@ const MoodWellness = () => {
 
   const emotionalStateOptions = [
     { value: 'Calm', emoji: '😌', label: 'Calm' },
+    { value: 'Anxious', emoji: '😟', label: 'Anxious' },
     { value: 'Frazzled', emoji: '😰', label: 'Frazzled' },
     { value: 'Connected', emoji: '🤗', label: 'Connected' },
     { value: 'Withdrawn', emoji: '😔', label: 'Withdrawn' },
